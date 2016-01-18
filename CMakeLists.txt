@@ -1,9 +1,9 @@
 project(rippled)
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.2)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 SET(CMAKE_FIND_LIBRARY_SUFFIXES .a .so)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/libs)
-SET( CMAKE_VERBOSE_MAKEFILE on )
+#SET( CMAKE_VERBOSE_MAKEFILE on )
 include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG("-std=c++11" COMPILER_SUPPORTS_CXX11)
 CHECK_CXX_COMPILER_FLAG("-std=c++14" COMPILER_SUPPORTS_CXX14)
@@ -23,7 +23,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug" )
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${STD_CXX} -g -Wall -Wno-unused-variable -pthread")
 else()
     set(CMAKE_BUILD_TYPE "Release")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${STD_CXX} -fno-strict-aliasing -Wno-unused-but-set-variable -Wno-deprecated")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${STD_CXX} -pthread -fno-strict-aliasing -Wno-unused-but-set-variable -Wno-deprecated")
 endif( CMAKE_BUILD_TYPE STREQUAL "Debug" )
 message("Build Type:" ${CMAKE_BUILD_TYPE} ${CMAKE_CXX_FLAGS})
 
@@ -59,6 +59,8 @@ aux_source_directory(./src/ripple/net/impl SRC_LIST)
 aux_source_directory(./src/ripple/overlay/impl SRC_LIST)
 aux_source_directory(./src/ripple/nodestore/impl SRC_LIST)
 #aux_source_directory(./src/ripple/unity SRC_LIST)
+
+add_library(${PROJECT_NAME}_object OBJECT ${SRC_LIST})
 
 set(UNITY_LIST
     ./src/ripple/unity/soci.cpp
@@ -98,9 +100,10 @@ set(UNITY_LIST
     ./src/ripple/unity/websocket04.cpp
     ./src/ripple/unity/secp256k1.cpp
     )
+
 add_executable(${PROJECT_NAME} ${UNITY_LIST})
 
-#add_executable(${PROJECT_NAME} ${SRC_LIST})
+
 
 
 #find boost lib
@@ -145,17 +148,19 @@ set(BEAST_SRC
 add_library(beast  ${BEAST_SRC})
 
 if(UNIX)
-    set(LINK_FLAGS "-ldl -lgmp")
+    set(LINK_FLAGS "-lpthread -ldl -lgmp")
 endif()
 
 find_library(soci_core
     NAMES soci_core
-    HINTS "/home/jeffrey/QtC++/rippled/build/lib"
+    HINTS "/home/lieefu/QtC++/rippled/build/lib"
 )
 message("soci:" ${soci_core})
-find_library(pthread
-    NAMES libpthread.so)
-message("pthread:" ${pthread})
+#find_library(pthread
+#    NAMES libpthread.so)
+#message("pthread:" ${pthread})
 
-target_link_libraries(${PROJECT_NAME} ed25519 beast ${pthread} ${soci_core} ${protobuf}
-    ${secp256k1} ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES} ${LINK_FLAGS})
+target_link_libraries(${PROJECT_NAME}  ${LINK_FLAGS} ed25519 beast ${soci_core} ${protobuf}
+    ${secp256k1} ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES})
+
+message("show info:" INCLUDE_DIRECTORIES ${COMPILE_DEFINITIONS} and ${COMPILE_OPTIONS} )
