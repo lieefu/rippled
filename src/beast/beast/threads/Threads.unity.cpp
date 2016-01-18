@@ -22,6 +22,6 @@
 #endif
 
 #include <beast/threads/impl/Stoppable.cpp>
-#include <beast/threads/impl/Stoppable.test.cpp>
+//#include <beast/threads/impl/Stoppable.test.cpp>
 #include <beast/threads/impl/Thread.cpp>
 #include <beast/threads/impl/WaitableEvent.cpp>

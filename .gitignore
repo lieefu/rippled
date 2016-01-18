@@ -1,5 +1,6 @@
 # .gitignore
-
+# Ignore cmake files.
+*.user
 # Ignore vim swap files.
 *.swp
 

@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 2.8)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 SET(CMAKE_FIND_LIBRARY_SUFFIXES .a .so)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/libs)
-#SET( CMAKE_VERBOSE_MAKEFILE on )
+SET( CMAKE_VERBOSE_MAKEFILE on )
 include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG("-std=c++11" COMPILER_SUPPORTS_CXX11)
 CHECK_CXX_COMPILER_FLAG("-std=c++14" COMPILER_SUPPORTS_CXX14)
@@ -23,18 +23,18 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug" )
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${STD_CXX} -g -Wall -Wno-unused-variable -pthread")
 else()
     set(CMAKE_BUILD_TYPE "Release")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -${STD_CXX}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${STD_CXX} -fno-strict-aliasing -Wno-unused-but-set-variable -Wno-deprecated")
 endif( CMAKE_BUILD_TYPE STREQUAL "Debug" )
 message("Build Type:" ${CMAKE_BUILD_TYPE} ${CMAKE_CXX_FLAGS})
 
-SET(CMAKE_FIND_LIBRARY_SUFFIXES .a .so)
 
 # Instruct CMake to run moc automatically when needed.
 set(CMAKE_AUTOMOC ON)
 INCLUDE_DIRECTORIES(/opt/protobuf/include)
 INCLUDE_DIRECTORIES(./src ./src/beast ./src/soci/include ./src/rocksdb2/include
     ./src/sqlite ./src/ed25519-donna ./src/snappy/snappy ./src/snappy/config
-    ./src/websocketpp
+    ./src/websocketpp ./src/rocksdb2 ./build/proto ./src/secp256k1
+    ./src/soci/src ./src/soci/include/private
     )
 
 aux_source_directory(./src/ripple/app/main SRC_LIST)
@@ -58,15 +58,54 @@ aux_source_directory(./src/ripple/net/impl SRC_LIST)
 #aux_source_directory(./src/ripple/websocket SRC_LIST)
 aux_source_directory(./src/ripple/overlay/impl SRC_LIST)
 aux_source_directory(./src/ripple/nodestore/impl SRC_LIST)
-aux_source_directory(./src/ripple/unity SRC_LIST)
+#aux_source_directory(./src/ripple/unity SRC_LIST)
 
+set(UNITY_LIST
+    ./src/ripple/unity/soci.cpp
+    ./src/ripple/unity/soci_ripple.cpp
+    ./src/ripple/unity/app_ledger.cpp
+    ./src/ripple/unity/app_main.cpp
+    ./src/ripple/unity/app_misc.cpp
+    ./src/ripple/unity/app_paths.cpp
+    ./src/ripple/unity/app_tests.cpp
+    ./src/ripple/unity/app_tx.cpp
+    ./src/ripple/unity/core.cpp
+    ./src/ripple/unity/basics.cpp
+    ./src/ripple/unity/crypto.cpp
+    ./src/ripple/unity/ledger.cpp
+    ./src/ripple/unity/net.cpp
+    ./src/ripple/unity/overlay.cpp
+    ./src/ripple/unity/peerfinder.cpp
+    ./src/ripple/unity/json.cpp
+    ./src/ripple/unity/protocol.cpp
+    ./src/ripple/unity/rpcx.cpp
+    ./src/ripple/unity/shamap.cpp
+    ./src/ripple/unity/test.cpp
+    ./src/ripple/unity/unl.cpp
+    ./src/ripple/unity/nodestore.cpp
+    ./src/ripple/unity/git_id.cpp
+    ./src/beast/beast/unity/hash_unity.cpp
+    ./src/ripple/unity/beast.cpp
+    ./src/ripple/unity/lz4.c
+    ./src/ripple/unity/protobuf.cpp
+    ./src/ripple/unity/ripple.proto.cpp
+    ./src/ripple/unity/resource.cpp
+    ./src/ripple/unity/server.cpp
+    ./src/ripple/unity/websocket02.cpp
+    ./src/ripple/unity/beastc.c
+    ./src/ripple/unity/rocksdb.cpp
+    ./src/ripple/unity/snappy.cpp
+    ./src/ripple/unity/websocket04.cpp
+    ./src/ripple/unity/secp256k1.cpp
+    )
+add_executable(${PROJECT_NAME} ${UNITY_LIST})
 
-add_executable(${PROJECT_NAME} ${SRC_LIST})
+#add_executable(${PROJECT_NAME} ${SRC_LIST})
 
 
 #find boost lib
 set(BOOST_ROOT "/opt/boost_1_60_0")
-find_package(Boost REQUIRED COMPONENTS filesystem system coroutine date_time regex program_options)
+find_package(Boost REQUIRED COMPONENTS coroutine context filesystem system date_time regex program_options thread)
 
 if(NOT Boost_FOUND)
   message(FATAL_ERROR "Not find Boost library")
@@ -106,13 +145,17 @@ set(BEAST_SRC
 add_library(beast  ${BEAST_SRC})
 
 if(UNIX)
-    set(LINK_FLAGS "-lpthread -ldl -lgmp")
+    set(LINK_FLAGS "-ldl -lgmp")
 endif()
 
 find_library(soci_core
     NAMES soci_core
-    HINTS "/home/lieefu/git/rippled/src/soci/build/lib"
+    HINTS "/home/jeffrey/QtC++/rippled/build/lib"
 )
 message("soci:" ${soci_core})
-target_link_libraries(${PROJECT_NAME} ed25519 beast ${soci_core} ${protobuf}
+find_library(pthread
+    NAMES libpthread.so)
+message("pthread:" ${pthread})
+
+target_link_libraries(${PROJECT_NAME} ed25519 beast ${pthread} ${soci_core} ${protobuf}
     ${secp256k1} ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES} ${LINK_FLAGS})
