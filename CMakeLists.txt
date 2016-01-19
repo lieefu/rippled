@@ -36,16 +36,19 @@ INCLUDE_DIRECTORIES(./src ./src/beast ./src/soci/include ./src/rocksdb2/include
     ./src/websocketpp ./src/rocksdb2 ./build/proto ./src/secp256k1
     ./src/soci/src ./src/soci/include/private
     )
-
 aux_source_directory(./src/ripple/app/main SRC_LIST)
 aux_source_directory(./src/ripple/app/ledger SRC_LIST)
 aux_source_directory(./src/ripple/app/ledger/impl SRC_LIST)
+aux_source_directory(./src/ripple/app/misc SRC_LIST)
 aux_source_directory(./src/ripple/app/misc/impl SRC_LIST)
-aux_source_directory(./src/ripple/app/path/impl SRC_LIST)
-aux_source_directory(./src/ripple/tx/ledger/impl SRC_LIST)
+aux_source_directory(./src/ripple/app/paths SRC_LIST)
+aux_source_directory(./src/ripple/app/paths/impl SRC_LIST)
+aux_source_directory(./src/ripple/app/paths/cursor SRC_LIST)
+aux_source_directory(./src/ripple/app/tx/impl SRC_LIST)
 aux_source_directory(./src/ripple/core/impl SRC_LIST)
 aux_source_directory(./src/ripple/basics/impl SRC_LIST)
 aux_source_directory(./src/ripple/json/impl SRC_LIST)
+aux_source_directory(./src/ripple/ledger/detail SRC_LIST)
 aux_source_directory(./src/ripple/ledger/impl SRC_LIST)
 aux_source_directory(./src/ripple/protocol/impl SRC_LIST)
 aux_source_directory(./src/ripple/rpc/impl SRC_LIST)
@@ -57,13 +60,34 @@ aux_source_directory(./src/ripple/shamap/impl SRC_LIST)
 aux_source_directory(./src/ripple/net/impl SRC_LIST)
 #aux_source_directory(./src/ripple/websocket SRC_LIST)
 aux_source_directory(./src/ripple/overlay/impl SRC_LIST)
-aux_source_directory(./src/ripple/nodestore/impl SRC_LIST)
-#aux_source_directory(./src/ripple/unity SRC_LIST)
+aux_source_directory(./src/ripple/peerfinder/impl SRC_LIST)
+#aux_source_directory(./src/ripple/nodestore/impl SRC_LIST)
+aux_source_directory(./src/ripple/unl/tests SRC_LIST)
 
-add_library(${PROJECT_NAME}_object OBJECT ${SRC_LIST})
+
+set(UNITY_COMMON
+    ./src/ripple/unity/soci.cpp
+    ./src/ripple/unity/nodestore.cpp
+    ./src/ripple/unity/git_id.cpp
+    ./src/beast/beast/unity/hash_unity.cpp
+    ./src/ripple/unity/beast.cpp
+    ./src/ripple/unity/lz4.c
+    ./src/ripple/unity/protobuf.cpp
+    ./src/ripple/unity/ripple.proto.cpp
+    ./src/ripple/unity/resource.cpp
+    ./src/ripple/unity/server.cpp
+    ./src/ripple/unity/websocket02.cpp
+    ./src/ripple/unity/beastc.c
+    ./src/ripple/unity/rocksdb.cpp
+    ./src/ripple/unity/snappy.cpp
+    ./src/ripple/unity/websocket04.cpp
+    ./src/ripple/unity/secp256k1.cpp
+    ./src/ripple/unity/ed25519.c
+    )
+add_executable(${PROJECT_NAME} ${SRC_LIST} ${UNITY_COMMON})
+#add_library(${PROJECT_NAME}_object OBJECT ${SRC_LIST})
 
 set(UNITY_LIST
-    ./src/ripple/unity/soci.cpp
     ./src/ripple/unity/soci_ripple.cpp
     ./src/ripple/unity/app_ledger.cpp
     ./src/ripple/unity/app_main.cpp
@@ -84,25 +108,10 @@ set(UNITY_LIST
     ./src/ripple/unity/shamap.cpp
     ./src/ripple/unity/test.cpp
     ./src/ripple/unity/unl.cpp
-    ./src/ripple/unity/nodestore.cpp
-    ./src/ripple/unity/git_id.cpp
-    ./src/beast/beast/unity/hash_unity.cpp
-    ./src/ripple/unity/beast.cpp
-    ./src/ripple/unity/lz4.c
-    ./src/ripple/unity/protobuf.cpp
-    ./src/ripple/unity/ripple.proto.cpp
-    ./src/ripple/unity/resource.cpp
-    ./src/ripple/unity/server.cpp
-    ./src/ripple/unity/websocket02.cpp
-    ./src/ripple/unity/beastc.c
-    ./src/ripple/unity/rocksdb.cpp
-    ./src/ripple/unity/snappy.cpp
-    ./src/ripple/unity/websocket04.cpp
-    ./src/ripple/unity/secp256k1.cpp
-    ./src/ripple/unity/ed25519.c
+
     )
 
-add_executable(${PROJECT_NAME} ${UNITY_LIST})
+#add_executable(${PROJECT_NAME} ${UNITY_LIST} ${UNITY_COMMON})
 
 
 
@@ -135,18 +144,18 @@ find_library(protobuf
 )
 
 #add_library(ed25519 ./src/ed25519-donna/ed25519.c)
-set(RIPPLED_DIR ./src)
-set(BEAST_SRC
-    ${RIPPLED_DIR}/beast/beast/chrono/Chrono.unity.cpp
-    ${RIPPLED_DIR}/beast/beast/threads/Threads.unity.cpp
-    ${RIPPLED_DIR}/beast/beast/strings/Strings.unity.cpp
-    ${RIPPLED_DIR}/beast/beast/utility/Utility.unity.cpp
-    ${RIPPLED_DIR}/beast/beast/module/core/core.unity.cpp
-    ${RIPPLED_DIR}/beast/beast/unity/hash_unity.cpp
-    ${RIPPLED_DIR}/beast/beast/insight/Insight.unity.cpp
-    ${RIPPLED_DIR}/beast/beast/http/HTTP.unity.cpp)
+#set(RIPPLED_DIR ./src)
+#set(BEAST_SRC
+#    ${RIPPLED_DIR}/beast/beast/chrono/Chrono.unity.cpp
+#    ${RIPPLED_DIR}/beast/beast/threads/Threads.unity.cpp
+#    ${RIPPLED_DIR}/beast/beast/strings/Strings.unity.cpp
+#    ${RIPPLED_DIR}/beast/beast/utility/Utility.unity.cpp
+#    ${RIPPLED_DIR}/beast/beast/module/core/core.unity.cpp
+#    ${RIPPLED_DIR}/beast/beast/unity/hash_unity.cpp
+#    ${RIPPLED_DIR}/beast/beast/insight/Insight.unity.cpp
+#    ${RIPPLED_DIR}/beast/beast/http/HTTP.unity.cpp)
 
-add_library(beast  ${BEAST_SRC})
+#add_library(beast  ${BEAST_SRC})
 
 if(UNIX)
     set(LINK_FLAGS "-lpthread -ldl -lgmp")
@@ -162,5 +171,3 @@ endif()
 #message("pthread:" ${pthread})
 
 target_link_libraries(${PROJECT_NAME}  ${LINK_FLAGS}  ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES} ${protobuf})
-
-message("show info:" INCLUDE_DIRECTORIES ${COMPILE_DEFINITIONS} and ${COMPILE_OPTIONS} )
