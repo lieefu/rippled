@@ -1,5 +1,5 @@
 project(rippled)
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(VERSION 3.3)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 SET(CMAKE_FIND_LIBRARY_SUFFIXES .a .so)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/libs)
@@ -99,6 +99,7 @@ set(UNITY_LIST
     ./src/ripple/unity/snappy.cpp
     ./src/ripple/unity/websocket04.cpp
     ./src/ripple/unity/secp256k1.cpp
+    ./src/ripple/unity/ed25519.c
     )
 
 add_executable(${PROJECT_NAME} ${UNITY_LIST})
@@ -122,18 +123,18 @@ if(NOT OPENSSL_FOUND)
 endif()
 include_directories(${OPENSSL_INCLUDE_DIR})
 
-find_library(secp256k1
-    NAMES secp256k1
-    HINTS "/opt/secp256k1/lib"
-)
-message("secp256k1" ${secp256k1})
+#find_library(secp256k1
+#    NAMES secp256k1
+#    HINTS "/opt/secp256k1/lib"
+#)
+#message("secp256k1" ${secp256k1})
 
 find_library(protobuf
     NAMES protobuf
     HINTS "/opt/protobuf/lib"
 )
 
-add_library(ed25519 ./src/ed25519-donna/ed25519.c)
+#add_library(ed25519 ./src/ed25519-donna/ed25519.c)
 set(RIPPLED_DIR ./src)
 set(BEAST_SRC
     ${RIPPLED_DIR}/beast/beast/chrono/Chrono.unity.cpp
@@ -151,16 +152,15 @@ if(UNIX)
     set(LINK_FLAGS "-lpthread -ldl -lgmp")
 endif()
 
-find_library(soci_core
-    NAMES soci_core
-    HINTS "/home/lieefu/QtC++/rippled/build/lib"
-)
-message("soci:" ${soci_core})
+#find_library(soci_core
+#    NAMES soci_core
+#    HINTS "/home/jeffrey/QtC++/rippled/build/lib"
+#)
+#message("soci:" ${soci_core})
 #find_library(pthread
 #    NAMES libpthread.so)
 #message("pthread:" ${pthread})
 
-target_link_libraries(${PROJECT_NAME}  ${LINK_FLAGS} ed25519 beast ${soci_core} ${protobuf}
-    ${secp256k1} ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES})
+target_link_libraries(${PROJECT_NAME}  ${LINK_FLAGS}  ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES} ${protobuf})
 
 message("show info:" INCLUDE_DIRECTORIES ${COMPILE_DEFINITIONS} and ${COMPILE_OPTIONS} )
