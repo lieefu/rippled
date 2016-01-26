@@ -35,6 +35,10 @@
 
 namespace ripple {
 
+LocalValue<bool> stAmountCalcSwitchover(true);
+using namespace std::chrono_literals;
+const NetClock::time_point STAmountSO::soTime{504640800s};
+
 static const std::uint64_t tenTo14 = 100000000000000ull;
 static const std::uint64_t tenTo14m1 = tenTo14 - 1;
 static const std::uint64_t tenTo17 = tenTo14 * 1000;
@@ -1015,7 +1019,7 @@ divide (STAmount const& num, STAmount const& den, Issue const& issue)
 
     if ((BN_add_word64 (&v, numVal) != 1) ||
             (BN_mul_word64 (&v, tenTo17) != 1) ||
-            (BN_div_word64 (&v, denVal) == ((std::uint64_t) - 1)))
+            (BN_div_word64 (&v, denVal) != 1))
     {
         Throw<std::runtime_error> ("internal bn error");
     }
@@ -1080,7 +1084,7 @@ multiply (STAmount const& v1, STAmount const& v2, Issue const& issue)
 
     if ((BN_add_word64 (&v, value1) != 1) ||
             (BN_mul_word64 (&v, value2) != 1) ||
-            (BN_div_word64 (&v, tenTo14) == ((std::uint64_t) - 1)))
+            (BN_div_word64 (&v, tenTo14) != 1))
     {
         Throw<std::runtime_error> ("internal bn error");
     }
@@ -1139,9 +1143,8 @@ canonicalizeRound (bool native, std::uint64_t& value, int& offset, bool roundUp)
 }
 
 STAmount
-mulRound (STAmount const& v1, STAmount const& v2,
-    Issue const& issue, bool roundUp,
-        STAmountCalcSwitchovers const& switchovers)
+mulRound (STAmount const& v1, STAmount const& v2, Issue const& issue,
+    bool roundUp)
 {
     if (v1 == zero || v2 == zero)
         return {issue};
@@ -1194,7 +1197,7 @@ mulRound (STAmount const& v1, STAmount const& v2,
     if (resultNegative != roundUp) // rounding down is automatic when we divide
         BN_add_word64 (&v, tenTo14m1);
 
-    if  (BN_div_word64 (&v, tenTo14) == ((std::uint64_t) - 1))
+    if  (BN_div_word64 (&v, tenTo14) != 1)
         Throw<std::runtime_error> ("internal bn error");
 
     // 10^16 <= product <= 10^18
@@ -1205,20 +1208,20 @@ mulRound (STAmount const& v1, STAmount const& v2,
     canonicalizeRound (
         isXRP (issue), amount, offset, resultNegative != roundUp);
     STAmount result (issue, amount, offset, resultNegative);
-    if (switchovers.enableUnderflowFix () && roundUp && !resultNegative && !result)
+    // Control when bugfixes that require switchover dates are enabled
+    if (roundUp && !resultNegative && !result && *stAmountCalcSwitchover)
     {
         // return the smallest value above zero
         amount = STAmount::cMinValue;
         offset = STAmount::cMinOffset;
-        return STAmount (issue, amount, offset, resultNegative);
+        return STAmount(issue, amount, offset, resultNegative);
     }
     return result;
 }
 
 STAmount
 divRound (STAmount const& num, STAmount const& den,
-    Issue const& issue, bool roundUp,
-        STAmountCalcSwitchovers const& switchovers)
+    Issue const& issue, bool roundUp)
 {
     if (den == zero)
         Throw<std::runtime_error> ("division by zero");
@@ -1254,7 +1257,7 @@ divRound (STAmount const& num, STAmount const& den,
     if (resultNegative != roundUp) // Rounding down is automatic when we divide
         BN_add_word64 (&v, denVal - 1);
 
-    if (BN_div_word64 (&v, denVal) == ((std::uint64_t) - 1))
+    if (BN_div_word64 (&v, denVal) != 1)
         Throw<std::runtime_error> ("internal bn error");
 
     // 10^16 <= quotient <= 10^18
@@ -1265,7 +1268,8 @@ divRound (STAmount const& num, STAmount const& den,
     canonicalizeRound (
         isXRP (issue), amount, offset, resultNegative != roundUp);
     STAmount result (issue, amount, offset, resultNegative);
-    if (switchovers.enableUnderflowFix () && roundUp && !resultNegative && !result)
+    // Control when bugfixes that require switchover dates are enabled
+    if (roundUp && !resultNegative && !result && *stAmountCalcSwitchover)
     {
         // return the smallest value above zero
         amount = STAmount::cMinValue;
@@ -1273,25 +1277,6 @@ divRound (STAmount const& num, STAmount const& den,
         return STAmount (issue, amount, offset, resultNegative);
     }
     return result;
-}
-
-NetClock::time_point
-STAmountCalcSwitchovers::enableUnderflowFixCloseTime ()
-{
-    using namespace std::chrono_literals;
-    // Mon Dec 28, 2015 10:00:00am PST
-    return NetClock::time_point{504640800s};
-}
-
-STAmountCalcSwitchovers::STAmountCalcSwitchovers (NetClock::time_point parentCloseTime)
-{
-    enableUnderflowFix_ = parentCloseTime > enableUnderflowFixCloseTime();
-}
-
-
-bool STAmountCalcSwitchovers::enableUnderflowFix () const
-{
-    return enableUnderflowFix_;
 }
 
 } // ripple

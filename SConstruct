@@ -73,6 +73,8 @@ The following extra options may be used:
 
     --static        On linux, link protobuf, openssl, libc++, and boost statically
 
+    --sanitize=[address, thread]  On gcc & clang, add sanitizer instrumentation
+
 GCC 5: If the gcc toolchain is used, gcc version 5 or better is required. On
     linux distros that ship with gcc 4 (ubuntu < 15.10), rippled will force gcc
     to use gcc4's ABI (there was an ABI change between versions). This allows us
@@ -121,6 +123,9 @@ import scons_to_ninja
 
 AddOption('--ninja', dest='ninja', action='store_true',
           help='generate ninja build file build.ninja')
+
+AddOption('--sanitize', dest='sanitize', choices=['address', 'thread'],
+          help='Build with sanitizer support (gcc and clang only).')
 
 AddOption('--static', dest='static', action='store_true',
           help='On linux, link protobuf, openssl, libc++, and boost statically')
@@ -428,6 +433,17 @@ def get_libs(lib, static):
     except:
         raise Exception('pkg-config failed for ' + lib)
 
+def add_sanitizer (toolchain, env):
+    san = GetOption('sanitize')
+    if not san: return
+    san_to_lib = {'address': 'asan', 'thread': 'tsan'}
+    if toolchain not in Split('clang gcc'):
+        raise Exception("Sanitizers are only supported for gcc and clang")
+    env.Append(CCFLAGS=['-fsanitize='+san, '-fno-omit-frame-pointer'])
+    env.Append(LINKFLAGS=['-fsanitize='+san])
+    add_static_libs(env, [san_to_lib[san]])
+    env.Append(CPPDEFINES=['SANITIZER='+san_to_lib[san].upper()])
+
 # Set toolchain and variant specific construction variables
 def config_env(toolchain, variant, env):
     if is_debug_variant(variant):
@@ -446,6 +462,8 @@ def config_env(toolchain, variant, env):
 
     if should_link_static() and not Beast.system.linux:
         raise Exception("Static linking is only implemented for linux.")
+
+    add_sanitizer(toolchain, env)
 
     if toolchain in Split('clang gcc'):
         if Beast.system.linux:
@@ -866,7 +884,6 @@ def get_classic_sources(toolchain):
     append_sources(result, *list_sources('src/ripple/rpc', '.cpp'))
     append_sources(result, *list_sources('src/ripple/shamap', '.cpp'))
     append_sources(result, *list_sources('src/ripple/test', '.cpp'))
-    append_sources(result, *list_sources('src/ripple/unl', '.cpp'))
 
     if use_shp(toolchain):
         cc_flags = {'CCFLAGS': ['--system-header-prefix=rocksdb2']}
@@ -910,7 +927,6 @@ def get_unity_sources(toolchain):
         'src/ripple/unity/rpcx.cpp',
         'src/ripple/unity/shamap.cpp',
         'src/ripple/unity/test.cpp',
-        'src/ripple/unity/unl.cpp',
     )
 
     if use_shp(toolchain):
@@ -1096,11 +1112,6 @@ for tu_style in ['classic', 'unity']:
                     'src/snappy/snappy',
                     'src/snappy/config',
                 ]
-            )
-
-            object_builder.add_source_files(
-                'src/ripple/unity/websocket04.cpp',
-                CPPPATH='src/websocketpp',
             )
 
             if toolchain == "clang" and Beast.system.osx:
