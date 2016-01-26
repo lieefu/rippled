@@ -35,15 +35,27 @@ char const* getRawVersionString ()
     //
     //  The build version number (edit this for each release)
     //
-        "0.31.0-b1"
+        "0.31.0-b4"
     //
     //  Must follow the format described here:
     //
     //  http://semver.org/
     //
+
+#if defined(DEBUG) || defined(SANITIZER)
+       "+"
 #ifdef DEBUG
-        "+DEBUG"
+        "DEBUG"
+#ifdef SANITIZER
+        "."
 #endif
+#endif
+
+#ifdef SANITIZER
+        BEAST_PP_STR1_(SANITIZER)
+#endif
+#endif
+
     //--------------------------------------------------------------------------
     ;
 

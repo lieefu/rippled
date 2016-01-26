@@ -236,8 +236,6 @@
     </ClInclude>
     <ClInclude Include="..\..\src\BeastConfig.h">
     </ClInclude>
-    <ClInclude Include="..\..\src\beast\beast\Arithmetic.h">
-    </ClInclude>
     <ClCompile Include="..\..\src\beast\beast\asio\Asio.unity.cpp">
       <ExcludedFromBuild>True</ExcludedFromBuild>
     </ClCompile>
@@ -311,8 +309,6 @@
     <ClInclude Include="..\..\src\beast\beast\config\CompilerConfig.h">
     </ClInclude>
     <ClInclude Include="..\..\src\beast\beast\config\ConfigCheck.h">
-    </ClInclude>
-    <ClInclude Include="..\..\src\beast\beast\config\ContractChecks.h">
     </ClInclude>
     <ClInclude Include="..\..\src\beast\beast\config\PlatformConfig.h">
     </ClInclude>
@@ -551,63 +547,7 @@
     </ClInclude>
     <ClInclude Include="..\..\src\beast\beast\Memory.h">
     </ClInclude>
-    <ClCompile Include="..\..\src\beast\beast\module\asio\asio.unity.cpp">
-      <ExcludedFromBuild>True</ExcludedFromBuild>
-    </ClCompile>
     <ClInclude Include="..\..\src\beast\beast\module\asio\AsyncObject.h">
-    </ClInclude>
-    <ClCompile Include="..\..\src\beast\beast\module\asio\HTTPField.cpp">
-      <ExcludedFromBuild>True</ExcludedFromBuild>
-    </ClCompile>
-    <ClInclude Include="..\..\src\beast\beast\module\asio\HTTPField.h">
-    </ClInclude>
-    <ClCompile Include="..\..\src\beast\beast\module\asio\HTTPHeaders.cpp">
-      <ExcludedFromBuild>True</ExcludedFromBuild>
-    </ClCompile>
-    <ClInclude Include="..\..\src\beast\beast\module\asio\HTTPHeaders.h">
-    </ClInclude>
-    <ClCompile Include="..\..\src\beast\beast\module\asio\HTTPMessage.cpp">
-      <ExcludedFromBuild>True</ExcludedFromBuild>
-    </ClCompile>
-    <ClInclude Include="..\..\src\beast\beast\module\asio\HTTPMessage.h">
-    </ClInclude>
-    <ClCompile Include="..\..\src\beast\beast\module\asio\HTTPParser.cpp">
-      <ExcludedFromBuild>True</ExcludedFromBuild>
-    </ClCompile>
-    <ClInclude Include="..\..\src\beast\beast\module\asio\HTTPParser.h">
-    </ClInclude>
-    <ClInclude Include="..\..\src\beast\beast\module\asio\HTTPParserImpl.h">
-    </ClInclude>
-    <ClCompile Include="..\..\src\beast\beast\module\asio\HTTPRequest.cpp">
-      <ExcludedFromBuild>True</ExcludedFromBuild>
-    </ClCompile>
-    <ClInclude Include="..\..\src\beast\beast\module\asio\HTTPRequest.h">
-    </ClInclude>
-    <ClCompile Include="..\..\src\beast\beast\module\asio\HTTPRequestParser.cpp">
-      <ExcludedFromBuild>True</ExcludedFromBuild>
-    </ClCompile>
-    <ClInclude Include="..\..\src\beast\beast\module\asio\HTTPRequestParser.h">
-    </ClInclude>
-    <ClCompile Include="..\..\src\beast\beast\module\asio\HTTPResponse.cpp">
-      <ExcludedFromBuild>True</ExcludedFromBuild>
-    </ClCompile>
-    <ClInclude Include="..\..\src\beast\beast\module\asio\HTTPResponse.h">
-    </ClInclude>
-    <ClCompile Include="..\..\src\beast\beast\module\asio\HTTPResponseParser.cpp">
-      <ExcludedFromBuild>True</ExcludedFromBuild>
-    </ClCompile>
-    <ClInclude Include="..\..\src\beast\beast\module\asio\HTTPResponseParser.h">
-    </ClInclude>
-    <ClCompile Include="..\..\src\beast\beast\module\asio\HTTPVersion.cpp">
-      <ExcludedFromBuild>True</ExcludedFromBuild>
-    </ClCompile>
-    <ClInclude Include="..\..\src\beast\beast\module\asio\HTTPVersion.h">
-    </ClInclude>
-    <ClInclude Include="..\..\src\beast\beast\module\core\containers\Array.h">
-    </ClInclude>
-    <ClInclude Include="..\..\src\beast\beast\module\core\containers\ArrayAllocationBase.h">
-    </ClInclude>
-    <ClInclude Include="..\..\src\beast\beast\module\core\containers\ElementComparator.h">
     </ClInclude>
     <ClInclude Include="..\..\src\beast\beast\module\core\core.h">
     </ClInclude>
@@ -631,88 +571,23 @@
     </ClCompile>
     <ClInclude Include="..\..\src\beast\beast\module\core\diagnostic\UnitTestUtilities.h">
     </ClInclude>
-    <ClCompile Include="..\..\src\beast\beast\module\core\files\DirectoryIterator.cpp">
-      <ExcludedFromBuild>True</ExcludedFromBuild>
-    </ClCompile>
-    <ClInclude Include="..\..\src\beast\beast\module\core\files\DirectoryIterator.h">
-    </ClInclude>
-    <ClCompile Include="..\..\src\beast\beast\module\core\files\File.cpp">
-      <ExcludedFromBuild>True</ExcludedFromBuild>
-    </ClCompile>
-    <ClInclude Include="..\..\src\beast\beast\module\core\files\File.h">
-    </ClInclude>
-    <ClCompile Include="..\..\src\beast\beast\module\core\files\FileInputStream.cpp">
-      <ExcludedFromBuild>True</ExcludedFromBuild>
-    </ClCompile>
-    <ClInclude Include="..\..\src\beast\beast\module\core\files\FileInputStream.h">
-    </ClInclude>
-    <ClCompile Include="..\..\src\beast\beast\module\core\files\FileOutputStream.cpp">
-      <ExcludedFromBuild>True</ExcludedFromBuild>
-    </ClCompile>
-    <ClInclude Include="..\..\src\beast\beast\module\core\files\FileOutputStream.h">
-    </ClInclude>
     <ClInclude Include="..\..\src\beast\beast\module\core\logging\Logger.h">
-    </ClInclude>
-    <ClCompile Include="..\..\src\beast\beast\module\core\memory\MemoryBlock.cpp">
-      <ExcludedFromBuild>True</ExcludedFromBuild>
-    </ClCompile>
-    <ClInclude Include="..\..\src\beast\beast\module\core\memory\MemoryBlock.h">
-    </ClInclude>
-    <ClCompile Include="..\..\src\beast\beast\module\core\misc\Result.cpp">
-      <ExcludedFromBuild>True</ExcludedFromBuild>
-    </ClCompile>
-    <ClInclude Include="..\..\src\beast\beast\module\core\misc\Result.h">
     </ClInclude>
     <ClInclude Include="..\..\src\beast\beast\module\core\native\BasicNativeHeaders.h">
     </ClInclude>
-    <ClCompile Include="..\..\src\beast\beast\module\core\native\bsd_Files.cpp">
-      <ExcludedFromBuild>True</ExcludedFromBuild>
-    </ClCompile>
     <ClCompile Include="..\..\src\beast\beast\module\core\native\bsd_SystemStats.cpp">
-      <ExcludedFromBuild>True</ExcludedFromBuild>
-    </ClCompile>
-    <ClCompile Include="..\..\src\beast\beast\module\core\native\linux_Files.cpp">
       <ExcludedFromBuild>True</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\..\src\beast\beast\module\core\native\linux_SystemStats.cpp">
       <ExcludedFromBuild>True</ExcludedFromBuild>
     </ClCompile>
-    <None Include="..\..\src\beast\beast\module\core\native\mac_Files.mm">
-    </None>
-    <None Include="..\..\src\beast\beast\module\core\native\mac_Strings.mm">
-    </None>
     <None Include="..\..\src\beast\beast\module\core\native\mac_SystemStats.mm">
     </None>
     <ClInclude Include="..\..\src\beast\beast\module\core\native\osx_ObjCHelpers.h">
     </ClInclude>
-    <ClInclude Include="..\..\src\beast\beast\module\core\native\posix_SharedCode.h">
-    </ClInclude>
-    <ClCompile Include="..\..\src\beast\beast\module\core\native\win32_Files.cpp">
-      <ExcludedFromBuild>True</ExcludedFromBuild>
-    </ClCompile>
     <ClCompile Include="..\..\src\beast\beast\module\core\native\win32_SystemStats.cpp">
       <ExcludedFromBuild>True</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="..\..\src\beast\beast\module\core\native\win32_Threads.cpp">
-      <ExcludedFromBuild>True</ExcludedFromBuild>
-    </ClCompile>
-    <ClInclude Include="..\..\src\beast\beast\module\core\streams\InputSource.h">
-    </ClInclude>
-    <ClCompile Include="..\..\src\beast\beast\module\core\streams\InputStream.cpp">
-      <ExcludedFromBuild>True</ExcludedFromBuild>
-    </ClCompile>
-    <ClInclude Include="..\..\src\beast\beast\module\core\streams\InputStream.h">
-    </ClInclude>
-    <ClCompile Include="..\..\src\beast\beast\module\core\streams\MemoryOutputStream.cpp">
-      <ExcludedFromBuild>True</ExcludedFromBuild>
-    </ClCompile>
-    <ClInclude Include="..\..\src\beast\beast\module\core\streams\MemoryOutputStream.h">
-    </ClInclude>
-    <ClCompile Include="..\..\src\beast\beast\module\core\streams\OutputStream.cpp">
-      <ExcludedFromBuild>True</ExcludedFromBuild>
-    </ClCompile>
-    <ClInclude Include="..\..\src\beast\beast\module\core\streams\OutputStream.h">
-    </ClInclude>
     <ClInclude Include="..\..\src\beast\beast\module\core\system\StandardIncludes.h">
     </ClInclude>
     <ClCompile Include="..\..\src\beast\beast\module\core\system\SystemStats.cpp">
@@ -725,26 +600,12 @@
     </ClCompile>
     <ClInclude Include="..\..\src\beast\beast\module\core\text\LexicalCast.h">
     </ClInclude>
-    <ClCompile Include="..\..\src\beast\beast\module\core\text\StringArray.cpp">
-      <ExcludedFromBuild>True</ExcludedFromBuild>
-    </ClCompile>
-    <ClInclude Include="..\..\src\beast\beast\module\core\text\StringArray.h">
-    </ClInclude>
-    <ClCompile Include="..\..\src\beast\beast\module\core\text\StringPairArray.cpp">
-      <ExcludedFromBuild>True</ExcludedFromBuild>
-    </ClCompile>
-    <ClInclude Include="..\..\src\beast\beast\module\core\text\StringPairArray.h">
-    </ClInclude>
-    <ClInclude Include="..\..\src\beast\beast\module\core\threads\CriticalSection.h">
-    </ClInclude>
     <ClInclude Include="..\..\src\beast\beast\module\core\threads\ScopedLock.h">
     </ClInclude>
     <ClCompile Include="..\..\src\beast\beast\module\core\thread\DeadlineTimer.cpp">
       <ExcludedFromBuild>True</ExcludedFromBuild>
     </ClCompile>
     <ClInclude Include="..\..\src\beast\beast\module\core\thread\DeadlineTimer.h">
-    </ClInclude>
-    <ClInclude Include="..\..\src\beast\beast\module\core\thread\MutexTraits.h">
     </ClInclude>
     <ClCompile Include="..\..\src\beast\beast\module\core\thread\Workers.cpp">
       <ExcludedFromBuild>True</ExcludedFromBuild>
@@ -758,11 +619,6 @@
     </ClInclude>
     <ClInclude Include="..\..\src\beast\beast\net\detail\Parse.h">
     </ClInclude>
-    <ClInclude Include="..\..\src\beast\beast\net\DynamicBuffer.h">
-    </ClInclude>
-    <ClCompile Include="..\..\src\beast\beast\net\impl\DynamicBuffer.cpp">
-      <ExcludedFromBuild>True</ExcludedFromBuild>
-    </ClCompile>
     <ClCompile Include="..\..\src\beast\beast\net\impl\IPAddressV4.cpp">
       <ExcludedFromBuild>True</ExcludedFromBuild>
     </ClCompile>
@@ -880,35 +736,6 @@
     <ClCompile Include="..\..\src\beast\beast\streams\tests\basic_abstract_ostream.test.cpp">
       <ExcludedFromBuild>True</ExcludedFromBuild>
     </ClCompile>
-    <ClInclude Include="..\..\src\beast\beast\Strings.h">
-    </ClInclude>
-    <ClInclude Include="..\..\src\beast\beast\strings\CharacterFunctions.h">
-    </ClInclude>
-    <ClInclude Include="..\..\src\beast\beast\strings\CharPointer_ASCII.h">
-    </ClInclude>
-    <ClInclude Include="..\..\src\beast\beast\strings\CharPointer_UTF16.h">
-    </ClInclude>
-    <ClInclude Include="..\..\src\beast\beast\strings\CharPointer_UTF32.h">
-    </ClInclude>
-    <ClInclude Include="..\..\src\beast\beast\strings\CharPointer_UTF8.h">
-    </ClInclude>
-    <ClCompile Include="..\..\src\beast\beast\strings\impl\CharacterFunctions.cpp">
-      <ExcludedFromBuild>True</ExcludedFromBuild>
-    </ClCompile>
-    <ClCompile Include="..\..\src\beast\beast\strings\impl\String.cpp">
-      <ExcludedFromBuild>True</ExcludedFromBuild>
-    </ClCompile>
-    <ClInclude Include="..\..\src\beast\beast\strings\NewLine.h">
-    </ClInclude>
-    <ClInclude Include="..\..\src\beast\beast\strings\String.h">
-    </ClInclude>
-    <ClInclude Include="..\..\src\beast\beast\strings\StringCharPointerType.h">
-    </ClInclude>
-    <ClInclude Include="..\..\src\beast\beast\strings\StringFromNumber.h">
-    </ClInclude>
-    <ClCompile Include="..\..\src\beast\beast\strings\Strings.unity.cpp">
-      <ExcludedFromBuild>True</ExcludedFromBuild>
-    </ClCompile>
     <ClInclude Include="..\..\src\beast\beast\Threads.h">
     </ClInclude>
     <ClCompile Include="..\..\src\beast\beast\threads\impl\Stoppable.cpp">
@@ -923,15 +750,7 @@
     <ClCompile Include="..\..\src\beast\beast\threads\impl\WaitableEvent.cpp">
       <ExcludedFromBuild>True</ExcludedFromBuild>
     </ClCompile>
-    <ClInclude Include="..\..\src\beast\beast\threads\ScopedWrapperContext.h">
-    </ClInclude>
     <ClInclude Include="..\..\src\beast\beast\threads\semaphore.h">
-    </ClInclude>
-    <ClInclude Include="..\..\src\beast\beast\threads\SharedLockGuard.h">
-    </ClInclude>
-    <ClInclude Include="..\..\src\beast\beast\threads\SharedMutexAdapter.h">
-    </ClInclude>
-    <ClInclude Include="..\..\src\beast\beast\threads\SpinLock.h">
     </ClInclude>
     <ClInclude Include="..\..\src\beast\beast\threads\Stoppable.h">
     </ClInclude>
@@ -940,10 +759,6 @@
     <ClCompile Include="..\..\src\beast\beast\threads\Threads.unity.cpp">
       <ExcludedFromBuild>True</ExcludedFromBuild>
     </ClCompile>
-    <ClInclude Include="..\..\src\beast\beast\threads\TryLockGuard.h">
-    </ClInclude>
-    <ClInclude Include="..\..\src\beast\beast\threads\UnlockGuard.h">
-    </ClInclude>
     <ClInclude Include="..\..\src\beast\beast\threads\WaitableEvent.h">
     </ClInclude>
     <ClCompile Include="..\..\src\beast\beast\unity\hash_unity.cpp">
@@ -1004,9 +819,6 @@
     </ClInclude>
     <ClInclude Include="..\..\src\beast\beast\utility\tagged_integer.h">
     </ClInclude>
-    <ClCompile Include="..\..\src\beast\beast\utility\tests\bassert.test.cpp">
-      <ExcludedFromBuild>True</ExcludedFromBuild>
-    </ClCompile>
     <ClCompile Include="..\..\src\beast\beast\utility\tests\empty_base_optimization.test.cpp">
       <ExcludedFromBuild>True</ExcludedFromBuild>
     </ClCompile>
@@ -1736,6 +1548,10 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|x64'">True</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|x64'">True</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="..\..\src\ripple\app\tests\Transaction_ordering_test.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|x64'">True</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|x64'">True</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="..\..\src\ripple\app\tests\TxQ_test.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|x64'">True</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|x64'">True</ExcludedFromBuild>
@@ -1950,6 +1766,8 @@
     </ClCompile>
     <ClInclude Include="..\..\src\ripple\basics\KeyCache.h">
     </ClInclude>
+    <ClInclude Include="..\..\src\ripple\basics\LocalValue.h">
+    </ClInclude>
     <ClInclude Include="..\..\src\ripple\basics\Log.h">
     </ClInclude>
     <ClInclude Include="..\..\src\ripple\basics\make_SSLContext.h">
@@ -2144,8 +1962,6 @@
     </ClCompile>
     <ClInclude Include="..\..\src\ripple\core\TimeKeeper.h">
     </ClInclude>
-    <ClInclude Include="..\..\src\ripple\crypto\Base58.h">
-    </ClInclude>
     <ClInclude Include="..\..\src\ripple\crypto\CAutoBN_CTX.h">
     </ClInclude>
     <ClInclude Include="..\..\src\ripple\crypto\CBigNum.h">
@@ -2156,10 +1972,6 @@
     </ClInclude>
     <ClInclude Include="..\..\src\ripple\crypto\GenerateDeterministicKey.h">
     </ClInclude>
-    <ClCompile Include="..\..\src\ripple\crypto\impl\Base58.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|x64'">True</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|x64'">True</ExcludedFromBuild>
-    </ClCompile>
     <ClCompile Include="..\..\src\ripple\crypto\impl\CBigNum.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|x64'">True</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|x64'">True</ExcludedFromBuild>
@@ -2208,6 +2020,10 @@
     </None>
     <ClInclude Include="..\..\src\ripple\crypto\RFC1751.h">
     </ClInclude>
+    <ClCompile Include="..\..\src\ripple\crypto\tests\CBigNum_test.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|x64'">True</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|x64'">True</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="..\..\src\ripple\crypto\tests\CKey.test.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|x64'">True</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|x64'">True</ExcludedFromBuild>
@@ -3590,6 +3406,12 @@
     </ClCompile>
     <ClInclude Include="..\..\src\ripple\shamap\TreeNodeCache.h">
     </ClInclude>
+    <ClInclude Include="..\..\src\ripple\test\BasicNetwork.h">
+    </ClInclude>
+    <ClCompile Include="..\..\src\ripple\test\impl\BasicNetwork_test.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|x64'">True</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|x64'">True</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="..\..\src\ripple\test\impl\ManualTimeKeeper.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|x64'">True</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|x64'">True</ExcludedFromBuild>
@@ -3766,10 +3588,6 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|x64'">True</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|x64'">True</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="..\..\src\ripple\test\mao\impl\Net_test.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|x64'">True</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|x64'">True</ExcludedFromBuild>
-    </ClCompile>
     <ClInclude Include="..\..\src\ripple\test\mao\Net.h">
     </ClInclude>
     <ClCompile Include="..\..\src\ripple\unity\app_ledger.cpp">
@@ -3906,51 +3724,13 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug.classic|x64'">True</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release.classic|x64'">True</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="..\..\src\ripple\unity\unl.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug.classic|x64'">True</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release.classic|x64'">True</ExcludedFromBuild>
-    </ClCompile>
     <ClCompile Include="..\..\src\ripple\unity\websocket02.cpp">
     </ClCompile>
-    <ClCompile Include="..\..\src\ripple\unity\websocket04.cpp">
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='debug.classic|x64'">..\..\src\websocketpp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='debug|x64'">..\..\src\websocketpp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='release.classic|x64'">..\..\src\websocketpp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='release|x64'">..\..\src\websocketpp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-    <ClInclude Include="..\..\src\ripple\unl\tests\BasicNetwork.h">
-    </ClInclude>
-    <ClCompile Include="..\..\src\ripple\unl\tests\Consensus_test.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|x64'">True</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|x64'">True</ExcludedFromBuild>
-    </ClCompile>
-    <ClInclude Include="..\..\src\ripple\unl\tests\metrics.h">
-    </ClInclude>
-    <ClCompile Include="..\..\src\ripple\unl\tests\Network_test.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|x64'">True</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|x64'">True</ExcludedFromBuild>
-    </ClCompile>
-    <ClInclude Include="..\..\src\ripple\unl\tests\Sim1.h">
-    </ClInclude>
-    <ClInclude Include="..\..\src\ripple\unl\tests\Sim2.h">
-    </ClInclude>
-    <ClInclude Include="..\..\src\ripple\unl\tests\Sim3.h">
-    </ClInclude>
-    <ClInclude Include="..\..\src\ripple\unl\tests\Sim4.h">
-    </ClInclude>
-    <ClCompile Include="..\..\src\ripple\unl\tests\SlotPeer_test.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|x64'">True</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|x64'">True</ExcludedFromBuild>
-    </ClCompile>
     <ClInclude Include="..\..\src\ripple\websocket\AutoSocket.h">
-    </ClInclude>
-    <ClInclude Include="..\..\src\ripple\websocket\Config04.h">
     </ClInclude>
     <ClInclude Include="..\..\src\ripple\websocket\Connection.h">
     </ClInclude>
     <ClInclude Include="..\..\src\ripple\websocket\Handler.h">
-    </ClInclude>
-    <ClInclude Include="..\..\src\ripple\websocket\Logger.h">
     </ClInclude>
     <ClCompile Include="..\..\src\ripple\websocket\LogWebsockets.cpp">
       <ExcludedFromBuild>True</ExcludedFromBuild>
@@ -3968,11 +3748,6 @@
       <ExcludedFromBuild>True</ExcludedFromBuild>
     </ClCompile>
     <ClInclude Include="..\..\src\ripple\websocket\WebSocket02.h">
-    </ClInclude>
-    <ClCompile Include="..\..\src\ripple\websocket\WebSocket04.cpp">
-      <ExcludedFromBuild>True</ExcludedFromBuild>
-    </ClCompile>
-    <ClInclude Include="..\..\src\ripple\websocket\WebSocket04.h">
     </ClInclude>
     <ClCompile Include="..\..\src\rocksdb2\db\builder.cc">
       <ExcludedFromBuild>True</ExcludedFromBuild>
@@ -4846,128 +4621,6 @@
       <ExcludedFromBuild>True</ExcludedFromBuild>
     </ClCompile>
     <ClInclude Include="..\..\src\sqlite\sqlite\sqlite3.h">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\base64\base64.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\close.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\common\connection_hdl.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\common\cpp11.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\common\functional.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\common\md5.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\common\memory.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\common\network.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\common\platforms.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\common\stdint.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\common\system_error.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\common\thread.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\common\time.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\concurrency\basic.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\config\core.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\connection.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\connection_base.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\endpoint.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\endpoint_base.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\error.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\extensions\extension.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\extensions\permessage_deflate\disabled.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\frame.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\http\constants.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\http\impl\parser.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\http\impl\request.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\http\impl\response.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\http\parser.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\http\request.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\http\response.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\impl\connection_impl.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\impl\endpoint_impl.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\impl\utilities_impl.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\logger\basic.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\logger\levels.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\message_buffer\alloc.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\message_buffer\message.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\processors\base.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\processors\hybi00.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\processors\hybi07.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\processors\hybi08.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\processors\hybi13.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\processors\processor.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\random\none.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\roles\server_endpoint.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\server.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\sha1\sha1.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\transport\asio\base.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\transport\asio\connection.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\transport\asio\endpoint.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\transport\asio\security\base.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\transport\asio\security\none.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\transport\base\connection.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\transport\base\endpoint.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\transport\iostream\base.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\transport\iostream\connection.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\transport\iostream\endpoint.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\uri.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\utf8_validator.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\utilities.hpp">
-    </ClInclude>
-    <ClInclude Include="..\..\src\websocketpp\websocketpp\version.hpp">
     </ClInclude>
     <ClCompile Include="..\..\src\websocketpp_02\src\base64\base64.cpp">
       <ExcludedFromBuild>True</ExcludedFromBuild>

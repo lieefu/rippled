@@ -106,8 +106,9 @@ void startServer (Application& app)
         }
     }
 
+    app.doStart();
     // Block until we get a stop RPC.
-    app.run ();
+    app.run();
 
     // Try to write out some entropy to use the next time we start.
     auto entropy = getEntropyFile (app.config());
@@ -456,7 +457,7 @@ int main (int argc, char** argv)
 {
     // Workaround for Boost.Context / Boost.Coroutine
     // https://svn.boost.org/trac/boost/ticket/10657
-    (void)beast::Time::currentTimeMillis();
+    (void)beast::currentTimeMillis();
 
 #ifdef _MSC_VER
     ripple::sha512_deprecatedMSVCWorkaround();
