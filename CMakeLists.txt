@@ -80,7 +80,6 @@ set(UNITY_COMMON
     ./src/ripple/unity/beastc.c
     ./src/ripple/unity/rocksdb.cpp
     ./src/ripple/unity/snappy.cpp
-    ./src/ripple/unity/websocket04.cpp
     ./src/ripple/unity/secp256k1.cpp
     ./src/ripple/unity/ed25519.c
     )
