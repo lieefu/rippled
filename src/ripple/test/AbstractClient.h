@@ -1,7 +1,7 @@
 //------------------------------------------------------------------------------
 /*
     This file is part of rippled: https://github.com/ripple/rippled
-    Copyright (c) 2012, 2013 Ripple Labs Inc.
+    Copyright (c) 2016 Ripple Labs Inc.
 
     Permission to use, copy, modify, and/or distribute this software for any
     purpose  with  or without fee is hereby granted, provided that the above
@@ -17,24 +17,41 @@
 */
 //==============================================================================
 
-#ifndef RIPPLE_TEST_JTX_TRUST_H_INCLUDED
-#define RIPPLE_TEST_JTX_TRUST_H_INCLUDED
+#ifndef RIPPLE_TEST_ABSTRACTCLIENT_H_INCLUDED
+#define RIPPLE_TEST_ABSTRACTCLIENT_H_INCLUDED
 
-#include <ripple/test/jtx/Account.h>
 #include <ripple/json/json_value.h>
-#include <ripple/protocol/STAmount.h>
 
 namespace ripple {
 namespace test {
-namespace jtx {
 
-/** Modify a trust line. */
-Json::Value
-trust (Account const& account,
-    STAmount const& amount,
-       std::uint32_t flags=0);
+/* Abstract Ripple Client interface.
 
-} // jtx
+   This abstracts the transport layer, allowing
+   commands to be submitted to a rippled server.
+*/
+class AbstractClient
+{
+public:
+    virtual ~AbstractClient() = default;
+
+    /** Submit a command synchronously.
+
+        The arguments to the function and the returned JSON
+        are in a normalized format, the same whether the client
+        is using the JSON-RPC over HTTP/S or WebSocket transport.
+
+        @param cmd The command to execute
+        @param params Json::Value of null or object type
+                      with zero or more key/value pairs.
+        @return The server response in normalized format.
+    */
+    virtual
+    Json::Value
+    invoke(std::string const& cmd,
+        Json::Value const& params = {}) = 0;
+};
+
 } // test
 } // ripple
 

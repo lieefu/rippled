@@ -1,7 +1,7 @@
 //------------------------------------------------------------------------------
 /*
     This file is part of rippled: https://github.com/ripple/rippled
-    Copyright (c) 2012, 2013 Ripple Labs Inc.
+    Copyright (c) 2016 Ripple Labs Inc.
 
     Permission to use, copy, modify, and/or distribute this software for any
     purpose  with  or without fee is hereby granted, provided that the above
@@ -17,24 +17,20 @@
 */
 //==============================================================================
 
-#ifndef RIPPLE_TEST_JTX_TRUST_H_INCLUDED
-#define RIPPLE_TEST_JTX_TRUST_H_INCLUDED
+#ifndef RIPPLE_TEST_HTTPCLIENT_H_INCLUDED
+#define RIPPLE_TEST_HTTPCLIENT_H_INCLUDED
 
-#include <ripple/test/jtx/Account.h>
-#include <ripple/json/json_value.h>
-#include <ripple/protocol/STAmount.h>
+#include <ripple/test/AbstractClient.h>
+#include <ripple/core/Config.h>
+#include <memory>
 
 namespace ripple {
 namespace test {
-namespace jtx {
 
-/** Modify a trust line. */
-Json::Value
-trust (Account const& account,
-    STAmount const& amount,
-       std::uint32_t flags=0);
+/** Returns a client using JSON-RPC over HTTP/S. */
+std::unique_ptr<AbstractClient>
+makeJSONRPCClient(Config const& cfg);
 
-} // jtx
 } // test
 } // ripple
 
