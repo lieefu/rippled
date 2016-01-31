@@ -976,6 +976,7 @@ public:
     void
     addStaticSource (beast::SharedPtr <Source> const& source)
     {
+        std::cout<<"!!!----------------------------Logic.h addStaticSource!!!!!!!!!!!!!!!!!!!!!!!1"<<std::endl;
         fetch (source);
     }
 
@@ -1009,6 +1010,7 @@ public:
     // Fetch bootcache addresses from the specified source.
     void fetch (beast::SharedPtr <Source> const& source)
     {
+        std::cout<<"!!!----------------------------Logic.h fetch!!!!!!!!!!!!!!!!!!!!!!!1"<<std::endl;
         Source::Results results;
 
         {

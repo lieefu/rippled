@@ -95,6 +95,8 @@ OverlayImpl::Timer::stop()
 void
 OverlayImpl::Timer::run()
 {
+    std::cout<<"!!!----------------------------OverlayImpl::Timer::run()!!!!!!!!!!!!!!!!!!!!!!!1"<<std::endl;
+
     error_code ec;
     timer_.expires_from_now (std::chrono::seconds(1));
     timer_.async_wait(overlay_.strand_.wrap(
@@ -105,6 +107,8 @@ OverlayImpl::Timer::run()
 void
 OverlayImpl::Timer::on_timer (error_code ec)
 {
+    std::cout<<"!!!----------------------------OverlayImpl::Timer::on_timer!!!!!!!!!!!!!!!!!!!!!!!1"<<std::endl;
+
     if (ec || overlay_.isStopping())
     {
         if (ec && ec != boost::asio::error::operation_aborted)
@@ -486,6 +490,7 @@ OverlayImpl::saveValidatorKeyManifests (DatabaseCon& db) const
 void
 OverlayImpl::onPrepare()
 {
+    std::cout<<"!!!----------------------------OverlayImpl::onPrepare()!!!!!!!!!!!!!!!!!!!!!!!1"<<std::endl;
     PeerFinder::Config config;
 
     if (app_.config().PEERS_MAX != 0)
@@ -560,6 +565,7 @@ OverlayImpl::onPrepare()
 void
 OverlayImpl::onStart ()
 {
+    std::cout<<"!!!----------------------------OverlayImpl::onStart ()!!!!!!!!!!!!!!!!!!!!!!!1"<<std::endl;
     auto const timer = std::make_shared<Timer>(*this);
     std::lock_guard <decltype(mutex_)> lock (mutex_);
     list_.emplace(timer.get(), timer);
@@ -1017,6 +1023,7 @@ OverlayImpl::stop()
 void
 OverlayImpl::autoConnect()
 {
+    std::cout<<"!!!----------------------------OverlayImpl::autoConnect()!!!!!!!!!!!!!!!!!!!!!!!1"<<std::endl;
     auto const result = m_peerFinder->autoconnect();
     for (auto addr : result)
         connect (addr);

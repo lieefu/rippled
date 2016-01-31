@@ -471,8 +471,8 @@ void InboundLedger::trigger (Peer::ptr const& peer, TriggerReason reason)
                 bool typeSet = false;
                 for (auto& p : need)
                 {
-                    if (m_journal.warning) m_journal.warning
-                        << "Want: " << p.second;
+//                    if (m_journal.warning) m_journal.warning
+//                        << "Want: type," <<p.first<<" hash:"<< p.second;
 
                     if (!typeSet)
                     {

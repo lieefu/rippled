@@ -29,6 +29,7 @@
 #include <deque>
 #include <locale>
 #include <memory>
+#include <iostream>
 
 namespace ripple {
 
@@ -102,6 +103,7 @@ public:
 
     void start ()
     {
+        std::cout<<"!!!----------------------------ResolverAsio start!!!!!!!!!!!!!!!!!!!!!!!1"<<std::endl;
         assert (m_stopped == true);
         assert (m_stop_called == false);
 
@@ -137,6 +139,7 @@ public:
         std::vector <std::string> const& names,
         HandlerType const& handler)
     {
+        std::cout<<"!!!----------------------------ResolverAsio resolve!!!!!!!!!!!!!!!!!!!!!!!1"<<std::endl;
         assert (m_stop_called == false);
         assert (m_stopped == true);
         assert (!names.empty());

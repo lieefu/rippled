@@ -1046,6 +1046,8 @@ void ApplicationImp::setup()
     if (! m_networkOPs->beginConsensus(m_ledgerMaster->getClosedLedger()->info().hash))
     {
         LogicError ("Unable to start consensus");
+    }else{
+        std::cout<<"###started consensus m_ledgerMaster->getClosedLedger()->info.seq"<<m_ledgerMaster->getClosedLedger()->info().seq<<std::endl;
     }
 
     m_overlay->setupValidatorKeyManifests (*config_, getWalletDB ());

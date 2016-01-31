@@ -622,6 +622,8 @@ void NetworkOPsImp::setClusterTimer ()
 
 void NetworkOPsImp::onDeadlineTimer (beast::DeadlineTimer& timer)
 {
+    std::cout<<"!!!#######################NetworkOPsImp::onDeadlineTimer!!!!!!!!!!!!!!!!!!!!!!!1"<<std::endl;
+
     if (timer == m_heartbeatTimer)
     {
         m_job_queue.addJob (jtNETOP_TIMER, "NetOPs.heartbeat",
@@ -636,6 +638,8 @@ void NetworkOPsImp::onDeadlineTimer (beast::DeadlineTimer& timer)
 
 void NetworkOPsImp::processHeartbeatTimer ()
 {
+    std::cout<<"!!!#######################NetworkOPsImp::processHeartbeatTimer!!!!!!!!!!!!!!!!!!!!!!!1"<<std::endl;
+
     {
         auto lock = beast::make_lock(app_.getMasterMutex());
 
@@ -1178,6 +1182,7 @@ public:
 
 void NetworkOPsImp::tryStartConsensus ()
 {
+    std::cout<<"!!!#########################NetworkOPsImp::tryStartConsensus!!!!!!!!!!!!!!!!!!!!!!!1"<<std::endl;
     uint256 networkClosed;
     bool ledgerChange = checkLastClosedLedger (
         app_.overlay ().getActivePeers (), networkClosed);
@@ -1421,10 +1426,12 @@ void NetworkOPsImp::switchLastClosedLedger (
 
 bool NetworkOPsImp::beginConsensus (uint256 const& networkClosed)
 {
+    std::cout<<"!!!#########################NetworkOPsImp::beginConsensus!!!!!!!!!!!!!!!!!!!!!!!1"<<std::endl;
+
     assert (networkClosed.isNonZero ());
 
     auto closingInfo = m_ledgerMaster.getCurrentLedger()->info();
-
+    std::cout<<"!!!#########################NetworkOPsImp::beginConsensus last close ledger req:"<<closingInfo.seq;
     if (m_journal.info) m_journal.info <<
         "Consensus time for #" << closingInfo.seq <<
         " with LCL " << closingInfo.parentHash;
@@ -1489,6 +1496,7 @@ NetworkOPsImp::mapComplete (uint256 const& hash,
 
 void NetworkOPsImp::endConsensus (bool correctLCL)
 {
+    std::cout<<"!!!#########################NetworkOPsImp::endConsensus (bool correctLCL)!!!!!!!!!!!!!!!!!!!!!!!1"<<std::endl;
     uint256 deadLedger = m_ledgerMaster.getClosedLedger ()->info().parentHash;
 
     // Why do we make a copy of the peer list here?
@@ -2527,6 +2535,8 @@ bool NetworkOPsImp::unsubBook (std::uint64_t uSeq, Book const& book)
 std::uint32_t NetworkOPsImp::acceptLedger (
     boost::optional<std::chrono::milliseconds> consensusDelay)
 {
+    std::cout<<"!!!#########################NetworkOPsImp::acceptLedger!!!!!!!!!!!!!!!!!!!!!!!1"<<std::endl;
+
     // This code-path is exclusively used when the server is in standalone
     // mode via `ledger_accept`
     assert (m_standalone);

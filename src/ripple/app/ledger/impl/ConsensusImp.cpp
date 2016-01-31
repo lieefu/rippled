@@ -81,6 +81,8 @@ ConsensusImp::startRound (
     Ledger::ref previousLedger,
     NetClock::time_point closeTime)
 {
+    std::cout<<"!!!#########################ConsensusImp::startRound!!!!!!!!!!!!!!!!!!!!!!!1"<<std::endl;
+
     consensus.startRound (
         prevLCLHash,
         previousLedger,

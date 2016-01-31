@@ -109,6 +109,7 @@ public:
     addFallbackStrings (std::string const& name,
         std::vector <std::string> const& strings) override
     {
+        std::cout<<"!!!----------------------------PeerfinderManager.cpp addFallbackStrings!!!!!!!!!!!!!!!!!!!!!!!1"<<std::endl;
         m_logic.addStaticSource (SourceStrings::New (name, strings));
     }
 

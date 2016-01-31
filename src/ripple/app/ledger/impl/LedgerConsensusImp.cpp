@@ -559,6 +559,8 @@ void LedgerConsensusImp::checkLCL ()
 
 void LedgerConsensusImp::handleLCL (uint256 const& lclHash)
 {
+    std::cout<<"!!!#########################LedgerConsensusImp::handleLCL!!!!!!!!!!!!!!!!!!!!!!!1"<<std::endl;
+
     assert (lclHash != mPrevLedgerHash ||
             mPreviousLedger->getHash () != lclHash);
 
@@ -630,6 +632,8 @@ void LedgerConsensusImp::handleLCL (uint256 const& lclHash)
 
 void LedgerConsensusImp::timerEntry ()
 {
+    std::cout<<"!!!#######################LedgerConsensusImp::timerEntry ()!!!!!!!!!!!!!!!!!!!!!!!1"<<std::endl;
+
     std::lock_guard<std::recursive_mutex> _(lock_);
 
     try
@@ -671,6 +675,7 @@ void LedgerConsensusImp::timerEntry ()
     }
     catch (SHAMapMissingNode const& mn)
     {
+        std::cout<<"!!!#######################LedgerConsensusImp::timerEntry () leaveConsensus()!!!!!!!!!!!!!!!!!!!!!!!1"<<std::endl;
         leaveConsensus ();
         JLOG (j_.error) <<
            "Missing node during consensus process " << mn;
@@ -722,6 +727,7 @@ void LedgerConsensusImp::statePreClose ()
 
 void LedgerConsensusImp::stateEstablish ()
 {
+    std::cout<<"!!!#########################LedgerConsensusImp::stateEstablish ()!!!!!!!!!!!!!!!!!!!!!!!1"<<std::endl;
     // Give everyone a chance to take an initial position
     if (mCurrentMSeconds < LEDGER_MIN_CONSENSUS)
         return;
@@ -902,6 +908,8 @@ bool LedgerConsensusImp::peerPosition (LedgerProposal::ref newPosition)
 void LedgerConsensusImp::simulate (
     boost::optional<std::chrono::milliseconds> consensusDelay)
 {
+    std::cout<<"!!!#########################LedgerConsensusImp::simulate!!!!!!!!!!!!!!!!!!!!!!!1"<<std::endl;
+
     std::lock_guard<std::recursive_mutex> _(lock_);
 
     JLOG (j_.info) << "Simulating consensus";
@@ -913,6 +921,7 @@ void LedgerConsensusImp::simulate (
 
 void LedgerConsensusImp::accept (std::shared_ptr<SHAMap> set)
 {
+    std::cout<<"!!!#########################LedgerConsensusImp::accept!!!!!!!!!!!!!!!!!!!!!!!1"<<std::endl;
     // put our set where others can get it later
     if (set->getHash ().isNonZero ())
        consensus_.takePosition (mPreviousLedger->info().seq, set);
@@ -1735,6 +1744,8 @@ void LedgerConsensusImp::checkOurValidation ()
 
 void LedgerConsensusImp::beginAccept (bool synchronous)
 {
+    std::cout<<"!!!#########################LedgerConsensusImp::beginAccept (bool synchronous)!!!!!!!!!!!!!!!!!!!!!!!1"<<std::endl;
+
     auto consensusSet = mAcquired[mOurPosition->getCurrentHash ()];
 
     if (!consensusSet)
@@ -1769,11 +1780,15 @@ void LedgerConsensusImp::startRound (
     int previousProposers,
     std::chrono::milliseconds previousConvergeTime)
 {
+    std::cout<<"!!!#########################LedgerConsensusImp::startRound!!!!!!!!!!!!!!!!!!!!!!!1"<<std::endl;
+
     std::lock_guard<std::recursive_mutex> _(lock_);
 
     if (state_ == State::processing)
     {
         // We can't start a new round while we're processing
+        std::cout<<"!!!#########################LedgerConsensusImp::startRound ---We can't start a new round while we're processing!!!!!!!!!!!!!!!!!!!!!!!1"<<std::endl;
+
         return;
     }
 
@@ -1852,6 +1867,7 @@ void LedgerConsensusImp::startRound (
     {
         // We may be falling behind, don't wait for the timer
         // consider closing the ledger immediately
+        std::cout<<"@@@@@@@@@@@@@@@@@@@@@2LedgerConsensusImp::startRound####timerEntry"<<std::endl;
         timerEntry ();
     }
 
