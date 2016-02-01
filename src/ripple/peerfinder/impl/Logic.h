@@ -470,7 +470,10 @@ public:
             return none;
 
         ConnectHandouts h (needed, m_squelches);
-
+        for(auto ipport:h.list()){
+             std::cout<<"1logic----autoconnect()"<<ipport.to_string();
+        }
+        std::cout<<std::endl;
         // Make sure we don't connect to already-connected entries.
         for (auto const& s : slots_)
         {
@@ -489,6 +492,10 @@ public:
         {
             get_fixed (needed, h.list(), m_squelches);
 
+            for(auto ipport:h.list()){
+                 std::cout<<"2logic----autoconnect()"<<ipport.to_string();
+            }
+            std::cout<<std::endl;
             if (! h.list().empty ())
             {
                 if (m_journal.debug) m_journal.debug << beast::leftw (18) <<
@@ -521,6 +528,10 @@ public:
             handout (&h, (&h)+1,
                 livecache_.hops.rbegin(),
                     livecache_.hops.rend());
+            for(auto ipport:h.list()){
+                 std::cout<<"3logic----autoconnect()"<<ipport.to_string();
+            }
+            std::cout<<std::endl;
             if (! h.list().empty ())
             {
                 if (m_journal.debug) m_journal.debug << beast::leftw (18) <<
@@ -557,6 +568,10 @@ public:
             ! h.full() && iter != bootcache_.end(); ++iter)
             h.try_insert (*iter);
 
+        for(auto ipport:h.list()){
+             std::cout<<"4logic----autoconnect()"<<ipport.to_string()<<std::endl;
+        }
+        std::cout<<std::endl;
         if (! h.list().empty ())
         {
             if (m_journal.debug) m_journal.debug << beast::leftw (18) <<
@@ -1001,6 +1016,7 @@ public:
         std::lock_guard<std::recursive_mutex> _(lock_);
         for (auto addr : list)
         {
+            std::cout<<"logic addBootcacheAddresses"<<addr.to_string()<<std::endl;
             if (bootcache_.insert (addr))
                 ++count;
         }

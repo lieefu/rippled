@@ -340,7 +340,7 @@ void
 OverlayImpl::connect (beast::IP::Endpoint const& remote_endpoint)
 {
     assert(work_);
-
+    std::cout<<"!!!!!!!!!!--OverlayImpl::connect:"<<remote_endpoint.to_string()<<std::endl;
     auto usage = resourceManager().newOutboundEndpoint (remote_endpoint);
     if (usage.disconnect())
     {
