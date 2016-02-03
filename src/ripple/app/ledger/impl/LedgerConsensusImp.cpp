@@ -132,9 +132,19 @@ shouldCloseLedger (
 }
 
 bool
-checkConsensusReached (int agreeing, int proposing)
+checkConsensusReached (int agreeing, int total, bool count_self)
 {
-    int currentPercentage = (agreeing * 100) / (proposing + 1);
+    // If we are alone, we have a consensus
+    if (total == 0)
+        return true;
+
+    if (count_self)
+    {
+        ++agreeing;
+        ++total;
+    }
+
+    int currentPercentage = (agreeing * 100) / total;
 
     return currentPercentage > minimumConsensusPercentage;
 }
@@ -167,6 +177,7 @@ checkConsensus (
     int currentFinished,
     std::chrono::milliseconds previousAgreeTime,
     std::chrono::milliseconds currentAgreeTime,
+    bool proposing,
     beast::Journal j)
 {
     JLOG (j.trace) <<
@@ -192,7 +203,7 @@ checkConsensus (
 
     // Have we, together with the nodes on our UNL list, reached the treshold
     // to declare consensus?
-    if (checkConsensusReached (currentAgree + 1, currentProposers))
+    if (checkConsensusReached (currentAgree, currentProposers, proposing))
     {
         JLOG (j.debug) << "normal consensus";
         return ConsensusState::Yes;
@@ -200,7 +211,7 @@ checkConsensus (
 
     // Have sufficient nodes on our UNL list moved on and reached the threshold
     // to declare consensus?
-    if (checkConsensusReached (currentFinished, currentProposers))
+    if (checkConsensusReached (currentFinished, currentProposers, false))
     {
         JLOG (j.warning) <<
             "We see no consensus, but 80% of nodes have moved on";
@@ -367,15 +378,17 @@ void LedgerConsensusImp::mapCompleteInternal (
     std::shared_ptr<SHAMap> const& map,
     bool acquired)
 {
-    CondLog (acquired, lsDEBUG, LedgerConsensus)
-        << "We have acquired TXS " << hash;
+    if (acquired)
+    {
+        JLOG (j_.trace) << "We have acquired txs " << hash;
+    }
 
     if (!map)  // If the map was invalid
     {
-        // this is an invalid/corrupt map
-        mAcquired[hash] = map;
         JLOG (j_.warning)
-            << "A trusted node directed us to acquire an invalid TXN map";
+            << "Tried to acquire invalid transaction map: "
+            << hash;
+        mAcquired[hash] = map;
         return;
     }
 
@@ -387,9 +400,7 @@ void LedgerConsensusImp::mapCompleteInternal (
     if (it != mAcquired.end ())
     {
         if (it->second)
-        {
             return; // we already have this map
-        }
 
         // We previously failed to acquire this map, now we have it
         mAcquired.erase (hash);
@@ -412,34 +423,39 @@ void LedgerConsensusImp::mapCompleteInternal (
         // this will create disputed transactions
         auto it2 = mAcquired.find (mOurPosition->getCurrentHash ());
 
-        if (it2 != mAcquired.end ())
-        {
-            assert ((it2->first == mOurPosition->getCurrentHash ())
-                && it2->second);
-            mCompares.insert(hash);
-            // Our position is not the same as the acquired position
-            createDisputes (it2->second, map);
-        }
-        else
-            assert (false); // We don't have our own position?!
+        if (it2 == mAcquired.end())
+            LogicError ("We cannot find our own position!");
+
+        assert ((it2->first == mOurPosition->getCurrentHash ())
+            && it2->second);
+        mCompares.insert(hash);
+        // Our position is not the same as the acquired position
+        createDisputes (it2->second, map);
     }
     else if (!mOurPosition)
+    {
         JLOG (j_.debug)
             << "Not creating disputes: no position yet.";
+    }
     else if (mOurPosition->isBowOut ())
+    {
         JLOG (j_.warning)
             << "Not creating disputes: not participating.";
+    }
     else
+    {
         JLOG (j_.debug)
             << "Not creating disputes: identical position.";
+    }
 
     mAcquired[hash] = map;
 
     // Adjust tracking for each peer that takes this position
     std::vector<NodeID> peers;
+    auto const mapHash = map->getHash ().as_uint256();
     for (auto& it : mPeerPositions)
     {
-        if (it.second->getCurrentHash () == map->getHash ().as_uint256())
+        if (it.second->getCurrentHash () == mapHash)
             peers.push_back (it.second->getPeerID ());
     }
 
@@ -447,11 +463,11 @@ void LedgerConsensusImp::mapCompleteInternal (
     {
         adjustCount (map, peers);
     }
-    else
+    else if (acquired)
     {
-        CondLog (acquired, lsWARNING, LedgerConsensus)
-            << "By the time we got the map "
-            << hash << " no peers were proposing it";
+        JLOG (j_.warning)
+            << "By the time we got the map " << hash
+            << " no peers were proposing it";
     }
 }
 
@@ -640,7 +656,10 @@ void LedgerConsensusImp::timerEntry ()
         using namespace std::chrono;
         mCurrentMSeconds = duration_cast<milliseconds>
                            (steady_clock::now() - mConsensusStartTime);
-        mClosePercent = mCurrentMSeconds * 100 / mPreviousMSeconds;
+
+        mClosePercent = mCurrentMSeconds * 100 /
+            std::max<milliseconds> (
+                mPreviousMSeconds, AV_MIN_CONSENSUS_TIME);
 
         switch (state_)
         {
@@ -791,7 +810,7 @@ bool LedgerConsensusImp::haveConsensus ()
 
     // Determine if we actually have consensus or not
     auto ret = checkConsensus (mPreviousProposers, agree + disagree, agree,
-        currentValidations, mPreviousMSeconds, mCurrentMSeconds,
+        currentValidations, mPreviousMSeconds, mCurrentMSeconds, mProposing,
         app_.journal ("LedgerTiming"));
 
     if (ret == ConsensusState::No)
@@ -1401,11 +1420,28 @@ void LedgerConsensusImp::takeInitialPosition (
             && ((mPreviousLedger->info().seq % 256) == 0))
     {
         // previous ledger was flag ledger, add pseudo-transactions
-        ValidationSet parentSet = app_.getValidations().getValidations (
-            mPreviousLedger->info().parentHash);
-        m_feeVote.doVoting (mPreviousLedger, parentSet, initialSet);
-        app_.getAmendmentTable ().doVoting (
-            mPreviousLedger, parentSet, initialSet);
+        auto const validations =
+            app_.getValidations().getValidations (
+                mPreviousLedger->info().parentHash);
+
+        auto const count = std::count_if (
+            validations.begin(), validations.end(),
+            [](auto const& v)
+            {
+                return v.second->isTrusted();
+            });
+
+        if (count >= ledgerMaster_.getMinValidations())
+        {
+            m_feeVote.doVoting (
+                mPreviousLedger,
+                validations,
+                initialSet);
+            app_.getAmendmentTable ().doVoting (
+                mPreviousLedger,
+                validations,
+                initialSet);
+        }
     }
 
     // Set should be immutable snapshot
@@ -1607,10 +1643,14 @@ void LedgerConsensusImp::updateOurPositions ()
             }
         }
 
-        CondLog (!mHaveCloseTimeConsensus, lsDEBUG, LedgerConsensus)
-            << "No CT consensus: Proposers:" << mPeerPositions.size ()
-            << " Proposing:" << (mProposing ? "yes" : "no") << " Thresh:"
-            << threshConsensus << " Pos:" << closeTime.time_since_epoch().count();
+        if (!mHaveCloseTimeConsensus)
+        {
+            JLOG (j_.debug) << "No CT consensus:"
+                << " Proposers:" << mPeerPositions.size ()
+                << " Proposing:" << (mProposing ? "yes" : "no")
+                << " Thresh:" << threshConsensus
+                << " Pos:" << closeTime.time_since_epoch().count();
+        }
     }
 
     // Temporarily send a new proposal if there's any change to our
@@ -1742,7 +1782,6 @@ void LedgerConsensusImp::beginAccept (bool synchronous)
         JLOG (j_.fatal)
             << "We don't have a consensus set";
         abort ();
-        return;
     }
 
     consensus_.newLCL (mPeerPositions.size (), mCurrentMSeconds);

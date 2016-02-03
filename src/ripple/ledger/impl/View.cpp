@@ -469,16 +469,19 @@ cdirNext (ReadView const& view,
     return true;
 }
 
-enabledAmendments_t
+std::set <uint256>
 getEnabledAmendments (ReadView const& view)
 {
-    enabledAmendments_t amendments;
-    auto const sleAmendments = view.read(keylet::amendments());
+    std::set<uint256> amendments;
 
-    if (sleAmendments)
+    if (auto const sle = view.read(keylet::amendments()))
     {
-        for (auto const &a : sleAmendments->getFieldV256 (sfAmendments))
-            amendments.insert (a);
+        if (!sle->isFieldPresent (sfAmendments))
+            LogicError ("No amendments field is present");
+
+        auto const& v = sle->getFieldV256 (sfAmendments);
+
+        amendments.insert (v.begin(), v.end());
     }
 
     return amendments;
@@ -487,20 +490,24 @@ getEnabledAmendments (ReadView const& view)
 majorityAmendments_t
 getMajorityAmendments (ReadView const& view)
 {
-    using tp = NetClock::time_point;
-    using d = tp::duration;
-    majorityAmendments_t majorities;
-    auto const sleAmendments = view.read(keylet::amendments());
+    majorityAmendments_t ret;
 
-    if (sleAmendments && sleAmendments->isFieldPresent (sfMajorities))
+    if (auto const sle = view.read(keylet::amendments()))
     {
-        auto const& majArray = sleAmendments->getFieldArray (sfMajorities);
-        for (auto const& m : majArray)
-            majorities[m.getFieldH256 (sfAmendment)] =
-                tp(d(m.getFieldU32(sfCloseTime)));
+        if (sle->isFieldPresent (sfMajorities))
+        {
+            using tp = NetClock::time_point;
+            using d = tp::duration;
+
+            auto const majorities = sle->getFieldArray (sfMajorities);
+
+            for (auto const& m : majorities)
+                ret[m.getFieldH256 (sfAmendment)] =
+                    tp(d(m.getFieldU32(sfCloseTime)));
+        }
     }
 
-    return majorities;
+    return ret;
 }
 
 boost::optional<uint256>
@@ -1353,9 +1360,8 @@ rippleSend (ApplyView& view,
 
     if (uSenderID == issuer || uReceiverID == issuer || issuer == noAccount())
     {
-        // VFALCO Why do we need this bCheckIssuer?
         // Direct send: redeeming IOUs and/or sending own IOUs.
-        terResult   = rippleCredit (view, uSenderID, uReceiverID, saAmount, false, j);
+        rippleCredit (view, uSenderID, uReceiverID, saAmount, false, j);
         saActual    = saAmount;
         terResult   = tesSUCCESS;
     }
@@ -1428,7 +1434,7 @@ accountSend (ApplyView& view,
         ? view.peek (keylet::account(uReceiverID))
         : SLE::pointer ();
 
-    if (ShouldLog (lsTRACE, View))
+    if (j.trace)
     {
         std::string sender_bal ("-");
         std::string receiver_bal ("-");
@@ -1439,7 +1445,7 @@ accountSend (ApplyView& view,
         if (receiver)
             receiver_bal = receiver->getFieldAmount (sfBalance).getFullText ();
 
-        JLOG (j.trace) << "accountSend> " <<
+       j.trace << "accountSend> " <<
             to_string (uSenderID) << " (" << sender_bal <<
             ") -> " << to_string (uReceiverID) << " (" << receiver_bal <<
             ") : " << saAmount.getFullText ();
@@ -1472,7 +1478,7 @@ accountSend (ApplyView& view,
         view.update (receiver);
     }
 
-    if (ShouldLog (lsTRACE, View))
+    if (j.trace)
     {
         std::string sender_bal ("-");
         std::string receiver_bal ("-");
@@ -1483,7 +1489,7 @@ accountSend (ApplyView& view,
         if (receiver)
             receiver_bal = receiver->getFieldAmount (sfBalance).getFullText ();
 
-        JLOG (j.trace) << "accountSend< " <<
+        j.trace << "accountSend< " <<
             to_string (uSenderID) << " (" << sender_bal <<
             ") -> " << to_string (uReceiverID) << " (" << receiver_bal <<
             ") : " << saAmount.getFullText ();

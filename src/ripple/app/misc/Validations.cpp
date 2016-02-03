@@ -74,6 +74,7 @@ private:
     }
 
 public:
+    explicit
     ValidationsImp (Application& app)
         : app_ (app)
         , mValidations ("Validations", 4096, 600, stopwatch(),
@@ -242,7 +243,6 @@ private:
 
         JLOG (j_.trace) << "VC: " << ledger << "f:" << full << " p:" << partial;
     }
-
 
     int getTrustedValidationCount (uint256 const& ledger) override
     {
