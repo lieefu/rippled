@@ -63,7 +63,7 @@ Json::Value doAccountInfo (RPC::Context& context)
     // Get info on account.
 
     auto jvAccepted = RPC::accountFromString (accountID, strIdent, bStrict);
-
+    std::cout<<"-----------------------------doAccountInfo:"<<jvAccepted.toStyledString()<<std::endl;
     if (jvAccepted)
         return jvAccepted;
 

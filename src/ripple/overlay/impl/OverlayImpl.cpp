@@ -473,12 +473,12 @@ OverlayImpl::setupValidatorKeyManifests (BasicConfig const& config,
     {
         if (journal_.debug)
             journal_.debug << "No [validation_manifest] section in config";
+        std::cout<<"No [validation_manifest] section in config"<<std::endl;
     }
-
     manifestCache_.load (
         db,
         app_.validators(),
-        journal_);
+        journal_);;;
 }
 
 void

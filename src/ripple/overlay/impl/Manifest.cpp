@@ -378,10 +378,12 @@ void ManifestCache::load (
         (db->prepare << sql,
              soci::into (sociRawData));
     st.execute ();
+    std::cout<<"----------------------------------"<<std::endl;
     while (st.fetch ())
     {
         std::string serialized;
         convert (sociRawData, serialized);
+        std::cout<<"----------------------------------"<<serialized<<std::endl;
         if (auto mo = make_Manifest (std::move (serialized)))
         {
             if (!mo->verify())
