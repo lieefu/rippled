@@ -17,46 +17,37 @@
 */
 //==============================================================================
 
-#ifndef RIPPLE_SERVER_WRITER_H_INCLUDED
-#define RIPPLE_SERVER_WRITER_H_INCLUDED
-
-#include <boost/asio/buffer.hpp>
-#include <functional>
+#include <string>
 #include <vector>
 
 namespace ripple {
 
-class Writer
+namespace detail {
+
+/** Amendments that this server supports and enables by default */
+std::vector<std::string>
+preEnabledAmendments ()
 {
-public:
-    virtual ~Writer() = default;
+    return
+    {
+    };
+}
 
-    /** Returns `true` if there is no more data to pull. */
-    virtual
-    bool
-    complete() = 0;
+/** Amendments that this server supports, but doesn't enable by default */
+std::vector<std::string>
+supportedAmendments ()
+{
+    return
+    {
+        { "4C97EBA926031A7CF7D7B36FDE3ED66DDA5421192D63DE53FFB46E43B9DC8373 MultiSign" },
+        { "C1B8D934087225F509BEB5A8EC24447854713EE447D277F69545ABFA0E0FD490 Tickets" },
+        { "DA1BD556B42D85EA9C84066D028D355B52416734D3283F85E216EA5DA6DB7E13 SusPay" },
+        { "6781F8368C4771B83E8B821D88F580202BCB4228075297B19E4FDC5233F1EFDC TrustSetAuth" },
+        { "42426C4D4F1009EE67080A9B7965B44656D7714D104A72F9B4369F97ABF044EE FeeEscalation" }
+    };
+}
 
-    /** Removes bytes from the input sequence. */
-    virtual
-    void
-    consume (std::size_t bytes) = 0;
+}
 
-    /** Add data to the input sequence.
-        @param bytes A hint to the number of bytes desired.
-        @param resume A functor to later resume execution.
-        @return `true` if the writer is ready to provide more data.
-    */
-    virtual
-    bool
-    prepare (std::size_t bytes,
-        std::function<void(void)> resume) = 0;
+}
 
-    /** Returns a ConstBufferSequence representing the input sequence. */
-    virtual
-    std::vector<boost::asio::const_buffer>
-    data() = 0;
-};
-
-} // ripple
-
-#endif

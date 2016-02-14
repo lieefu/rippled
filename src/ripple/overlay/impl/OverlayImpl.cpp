@@ -308,7 +308,7 @@ OverlayImpl::makePrefix (std::uint32_t id)
     return ss.str();
 }
 
-std::shared_ptr<HTTP::Writer>
+std::shared_ptr<Writer>
 OverlayImpl::makeRedirectResponse (PeerFinder::Slot::ptr const& slot,
     beast::http::message const& request, address_type remote_address)
 {
@@ -330,7 +330,7 @@ OverlayImpl::makeRedirectResponse (PeerFinder::Slot::ptr const& slot,
     {
         //?
     }
-    auto const response = HTTP::make_JsonWriter (m, json);
+    auto const response = make_JsonWriter (m, json);
     return response;
 }
 
@@ -857,7 +857,7 @@ OverlayImpl::processRequest (beast::http::message const& req,
     resp.reason("OK");
     Json::Value v;
     v["overlay"] = crawl();
-    handoff.response = HTTP::make_JsonWriter(resp, v);
+    handoff.response = make_JsonWriter(resp, v);
     return true;
 }
 
@@ -1073,7 +1073,7 @@ setup_Overlay (BasicConfig const& config)
 
     set (setup.ipLimit, "ip_limit", section);
     if (setup.ipLimit < 0)
-        throw std::runtime_error ("Configured IP limit is invalid");
+        Throw<std::runtime_error> ("Configured IP limit is invalid");
 
     std::string ip;
     set (ip, "public_ip", section);

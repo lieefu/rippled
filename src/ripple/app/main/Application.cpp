@@ -100,6 +100,22 @@ private:
     std::uint32_t maxSeq = 0;
     std::mutex maxSeqLock;
 
+    void acquire (
+        uint256 const& hash,
+        std::uint32_t seq)
+    {
+        if (hash.isNonZero())
+        {
+            auto j = app_.journal ("Ledger");
+
+            JLOG (j.error) <<
+                "Missing node in " << to_string (hash);
+
+            app_.getInboundLedgers ().acquire (
+                hash, seq, InboundLedger::fcGENERIC);
+        }
+    }
+
 public:
     AppFamily (AppFamily const&) = delete;
     AppFamily& operator= (AppFamily const&) = delete;
@@ -162,7 +178,10 @@ public:
     void
     missing_node (std::uint32_t seq) override
     {
-        WriteLog (lsERROR, Ledger) << "Missing node in " << seq;
+        auto j = app_.journal ("Ledger");
+
+        JLOG (j.error) <<
+            "Missing node in " << seq;
 
         // prevent recursive invocation
         std::unique_lock <std::mutex> lock (maxSeqLock);
@@ -179,11 +198,9 @@ public:
                 lock.unlock();
 
                 // This can invoke the missing node handler
-                uint256 hash = app_.getLedgerMaster().getHashBySeq (seq);
-
-                if (hash.isNonZero())
-                    app_.getInboundLedgers().acquire (
-                        hash, seq, InboundLedger::fcGENERIC);
+                acquire (
+                    app_.getLedgerMaster().getHashBySeq (seq),
+                    seq);
 
                 lock.lock();
             }
@@ -191,7 +208,8 @@ public:
         }
         else if (maxSeq < seq)
         {
-            // We found a more recent ledger with a missing node
+            // We found a more recent ledger with a
+            // missing node
             maxSeq = seq;
         }
     }
@@ -199,16 +217,18 @@ public:
     void
     missing_node (uint256 const& hash) override
     {
-        if (hash.isNonZero())
-        {
-            WriteLog (lsERROR, Ledger) << "Missing node in "
-                << to_string (hash);
-
-            app_.getInboundLedgers ().acquire (
-                hash, 0, InboundLedger::fcGENERIC);
-        }
+        acquire (hash, 0);
     }
 };
+
+
+/** Amendments that this server supports and enables by default */
+std::vector<std::string>
+preEnabledAmendments ();
+
+/** Amendments that this server supports, but doesn't enable by default */
+std::vector<std::string>
+supportedAmendments ();
 
 } // detail
 
@@ -343,6 +363,8 @@ public:
     boost::asio::signal_set m_signals;
     beast::WaitableEvent m_stop;
 
+    std::atomic<bool> checkSigs_;
+
     std::unique_ptr <ResolverAsio> m_resolver;
 
     io_latency_sampler m_io_latency_sampler;
@@ -453,10 +475,6 @@ public:
         , serverHandler_ (make_ServerHandler (*this, *m_networkOPs, get_io_service (),
             *m_jobQueue, *m_networkOPs, *m_resourceManager, *m_collectorManager))
 
-        , m_amendmentTable (make_AmendmentTable
-                            (weeks(2), MAJORITY_FRACTION,
-                             logs_->journal("AmendmentTable")))
-
         , mFeeTrack (std::make_unique<LoadFeeTrack>(logs_->journal("LoadManager")))
 
         , mHashRouter (std::make_unique<HashRouter>(
@@ -473,6 +491,8 @@ public:
         , m_entropyTimer (this)
 
         , m_signals (get_io_service())
+
+        , checkSigs_(true)
 
         , m_resolver (ResolverAsio::New (get_io_service(), logs_->journal("Resolver")))
 
@@ -500,7 +520,6 @@ public:
         m_nodeStoreScheduler.setJobQueue (*m_jobQueue);
 
         add (m_ledgerMaster->getPropertySource ());
-        add (*serverHandler_);
     }
 
     //--------------------------------------------------------------------------
@@ -510,6 +529,8 @@ public:
     void run() override;
     bool isShutdown() override;
     void signalStop() override;
+    bool checkSigs() const override;
+    void checkSigs(bool) override;
 
     //--------------------------------------------------------------------------
 
@@ -962,8 +983,23 @@ void ApplicationImp::setup()
     if (!config_->RUN_STANDALONE)
         updateTables ();
 
-    m_amendmentTable->addInitial (
-        config_->section (SECTION_AMENDMENTS));
+    // Configure the amendments the server supports
+    {
+        Section supportedAmendments ("Supported Amendments");
+        supportedAmendments.append (detail::supportedAmendments ());
+
+        Section enabledAmendments = config_->section (SECTION_AMENDMENTS);
+        enabledAmendments.append (detail::preEnabledAmendments ());
+
+        m_amendmentTable = make_AmendmentTable (
+            weeks(2),
+            MAJORITY_FRACTION,
+            supportedAmendments,
+            enabledAmendments,
+            config_->section (SECTION_VETO_AMENDMENTS),
+            logs_->journal("Amendments"));
+    }
+
     Pathfinder::initPathTable();
 
     m_ledgerMaster->setMinValidations (
@@ -1009,13 +1045,13 @@ void ApplicationImp::setup()
     if (!cluster_->load (config().section(SECTION_CLUSTER_NODES)))
     {
         m_journal.fatal << "Invalid entry in cluster configuration.";
-        throw std::exception();
+        Throw<std::exception>();
     }
 
     if (!validators_->load (config().section (SECTION_VALIDATORS)))
     {
         m_journal.fatal << "Invalid entry in validator configuration.";
-        throw std::exception();
+        Throw<std::exception>();
     }
 
     if (validators_->size () == 0 && !config_->RUN_STANDALONE)
@@ -1140,6 +1176,16 @@ ApplicationImp::isShutdown()
 {
     // from Stoppable mixin
     return isStopped();
+}
+
+bool ApplicationImp::checkSigs() const
+{
+    return checkSigs_;
+}
+
+void ApplicationImp::checkSigs(bool check)
+{
+    checkSigs_ = check;
 }
 
 //------------------------------------------------------------------------------

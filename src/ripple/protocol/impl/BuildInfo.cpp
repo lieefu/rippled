@@ -35,7 +35,7 @@ char const* getRawVersionString ()
     //
     //  The build version number (edit this for each release)
     //
-        "0.31.0-b5"
+        "0.31.0-b8"
     //
     //  Must follow the format described here:
     //
@@ -132,10 +132,7 @@ std::string const& getFullVersionString ()
 {
     struct PrettyPrinter
     {
-        PrettyPrinter ()
-        {
-            fullVersionString = "rippled-" + getVersionString ();
-        }
+        PrettyPrinter () : fullVersionString ("rippled-" + getVersionString ()){}
 
         std::string fullVersionString;
     };

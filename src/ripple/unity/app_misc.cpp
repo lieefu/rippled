@@ -19,7 +19,6 @@
 
 #include <BeastConfig.h>
 
-#include <ripple/app/misc/AmendmentTableImpl.cpp>
 #include <ripple/app/misc/CanonicalTXSet.cpp>
 #include <ripple/app/misc/FeeVoteImpl.cpp>
 #include <ripple/app/misc/HashRouter.cpp>
@@ -28,6 +27,7 @@
 #include <ripple/app/misc/Validations.cpp>
 
 #include <ripple/app/misc/impl/AccountTxPaging.cpp>
+#include <ripple/app/misc/impl/AmendmentTable.cpp>
 #include <ripple/app/misc/impl/Transaction.cpp>
 #include <ripple/app/misc/impl/TxQ.cpp>
 #include <ripple/app/misc/impl/ValidatorList.cpp>

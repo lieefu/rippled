@@ -101,8 +101,10 @@ private:
         std::thread thread;
         std::unique_ptr<AbstractClient> client;
 
-        AppBundle (std::unique_ptr<Config> config);
-        AppBundle (Application* app_);
+        AppBundle (beast::unit_test::suite& suite,
+            std::unique_ptr<Config> config);
+        AppBundle (beast::unit_test::suite& suite,
+            Application* app_);
         ~AppBundle();
     };
 
@@ -139,11 +141,11 @@ public:
 
     // VFALCO Could wrap the suite::log in a Journal here
     template <class... Args>
-    Env (beast::unit_test::suite& test_,
+    Env (beast::unit_test::suite& suite_,
         std::unique_ptr<Config> config,
             Args&&... args)
-        : test (test_)
-        , bundle_ (std::move(config))
+        : test (suite_)
+        , bundle_ (suite_, std::move(config))
     {
         memoize(Account::master);
         Pathfinder::initPathTable();
@@ -151,9 +153,9 @@ public:
     }
 
     template <class... Args>
-    Env (beast::unit_test::suite& test_,
+    Env (beast::unit_test::suite& suite_,
             Args&&... args)
-        : Env(test_, []()
+        : Env(suite_, []()
             {
                 auto p = std::make_unique<Config>();
                 setupConfigForUnitTests(*p);
@@ -299,7 +301,7 @@ public:
     void
     disable_sigs()
     {
-        nosig_ = true;
+        app().checkSigs(false);
     }
 
     /** Associate AccountID with account. */
@@ -540,7 +542,6 @@ public:
 protected:
     int trace_ = 0;
     bool testing_ = true;
-    bool nosig_ = false;
     TestStopwatch stopwatch_;
     uint256 txid_;
     TER ter_ = tesSUCCESS;
@@ -564,9 +565,6 @@ protected:
     */
     std::shared_ptr<STTx const>
     st (JTx const& jt);
-
-    ApplyFlags
-    applyFlags() const;
 
     inline
     void
