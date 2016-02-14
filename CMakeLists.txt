@@ -53,7 +53,7 @@ aux_source_directory(./src/ripple/ledger/impl SRC_LIST)
 aux_source_directory(./src/ripple/protocol/impl SRC_LIST)
 aux_source_directory(./src/ripple/rpc/impl SRC_LIST)
 aux_source_directory(./src/ripple/rpc/handlers SRC_LIST)
-#aux_source_directory(./src/ripple/server/impl SRC_LIST)
+aux_source_directory(./src/ripple/server/impl SRC_LIST)
 aux_source_directory(./src/ripple/crypto/impl SRC_LIST)
 aux_source_directory(./src/ripple/shamap/impl SRC_LIST)
 #aux_source_directory(./src/ripple/resource/impl SRC_LIST)
@@ -75,7 +75,6 @@ set(UNITY_COMMON
     ./src/ripple/unity/protobuf.cpp
     ./src/ripple/unity/ripple.proto.cpp
     ./src/ripple/unity/resource.cpp
-    ./src/ripple/unity/server.cpp
     ./src/ripple/unity/websocket02.cpp
     ./src/ripple/unity/beastc.c
     ./src/ripple/unity/rocksdb.cpp
@@ -105,6 +104,7 @@ set(UNITY_LIST
     ./src/ripple/unity/protocol.cpp
     ./src/ripple/unity/rpcx.cpp
     ./src/ripple/unity/shamap.cpp
+    ./src/ripple/unity/server.cpp
     ./src/ripple/unity/test.cpp
     ./src/ripple/unity/unl.cpp
 
