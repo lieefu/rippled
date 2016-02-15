@@ -2,7 +2,6 @@ project(rippled)
 cmake_minimum_required(VERSION 3.3)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 SET(CMAKE_FIND_LIBRARY_SUFFIXES .a .so)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/libs)
 #SET( CMAKE_VERBOSE_MAKEFILE on )
 include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG("-std=c++11" COMPILER_SUPPORTS_CXX11)
@@ -27,15 +26,18 @@ else()
 endif( CMAKE_BUILD_TYPE STREQUAL "Debug" )
 message("Build Type:" ${CMAKE_BUILD_TYPE} ${CMAKE_CXX_FLAGS})
 
-
-# Instruct CMake to run moc automatically when needed.
-set(CMAKE_AUTOMOC ON)
-INCLUDE_DIRECTORIES(/opt/protobuf/include)
 INCLUDE_DIRECTORIES(./src ./src/beast ./src/soci/include ./src/rocksdb2/include
     ./src/sqlite ./src/ed25519-donna ./src/snappy/snappy ./src/snappy/config
-    ./src/websocketpp ./src/rocksdb2 ./build/proto ./src/secp256k1
+    ./src/websocketpp ./src/rocksdb2 ./src/secp256k1
     ./src/soci/src ./src/soci/include/private
     )
+
+#execute protoc proto/ripple.proto --cpp_out= ,generate ripple.pb.cc and ripple.pb.h
+execute_process(COMMAND protoc proto/ripple.proto --cpp_out=${CMAKE_CURRENT_BINARY_DIR}/
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/ripple/
+    )
+INCLUDE_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR}/proto)
+
 aux_source_directory(./src/ripple/app/main SRC_LIST)
 aux_source_directory(./src/ripple/app/ledger SRC_LIST)
 aux_source_directory(./src/ripple/app/ledger/impl SRC_LIST)
@@ -56,14 +58,10 @@ aux_source_directory(./src/ripple/rpc/handlers SRC_LIST)
 aux_source_directory(./src/ripple/server/impl SRC_LIST)
 aux_source_directory(./src/ripple/crypto/impl SRC_LIST)
 aux_source_directory(./src/ripple/shamap/impl SRC_LIST)
-#aux_source_directory(./src/ripple/resource/impl SRC_LIST)
 aux_source_directory(./src/ripple/net/impl SRC_LIST)
-#aux_source_directory(./src/ripple/websocket SRC_LIST)
 aux_source_directory(./src/ripple/overlay/impl SRC_LIST)
 aux_source_directory(./src/ripple/peerfinder/impl SRC_LIST)
-#aux_source_directory(./src/ripple/nodestore/impl SRC_LIST)
 aux_source_directory(./src/ripple/unl/tests SRC_LIST)
-
 
 set(UNITY_COMMON
     ./src/ripple/unity/soci.cpp
@@ -107,13 +105,9 @@ set(UNITY_LIST
     ./src/ripple/unity/server.cpp
     ./src/ripple/unity/test.cpp
     ./src/ripple/unity/unl.cpp
-
     )
 
 #add_executable(${PROJECT_NAME} ${UNITY_LIST} ${UNITY_COMMON})
-
-
-
 
 #find boost lib
 set(BOOST_ROOT "/opt/boost_1_60_0")
@@ -131,42 +125,14 @@ if(NOT OPENSSL_FOUND)
 endif()
 include_directories(${OPENSSL_INCLUDE_DIR})
 
-#find_library(secp256k1
-#    NAMES secp256k1
-#    HINTS "/opt/secp256k1/lib"
-#)
-#message("secp256k1" ${secp256k1})
-
-find_library(protobuf
-    NAMES protobuf
-    HINTS "/opt/protobuf/lib"
-)
-
-#add_library(ed25519 ./src/ed25519-donna/ed25519.c)
-#set(RIPPLED_DIR ./src)
-#set(BEAST_SRC
-#    ${RIPPLED_DIR}/beast/beast/chrono/Chrono.unity.cpp
-#    ${RIPPLED_DIR}/beast/beast/threads/Threads.unity.cpp
-#    ${RIPPLED_DIR}/beast/beast/strings/Strings.unity.cpp
-#    ${RIPPLED_DIR}/beast/beast/utility/Utility.unity.cpp
-#    ${RIPPLED_DIR}/beast/beast/module/core/core.unity.cpp
-#    ${RIPPLED_DIR}/beast/beast/unity/hash_unity.cpp
-#    ${RIPPLED_DIR}/beast/beast/insight/Insight.unity.cpp
-#    ${RIPPLED_DIR}/beast/beast/http/HTTP.unity.cpp)
-
-#add_library(beast  ${BEAST_SRC})
+#find_library(PROTOBUF_LIBRARIES NAMES protobuf)
+find_package(Protobuf REQUIRED)
+if(NOT PROTOBUF_FOUND)
+  message(FATAL_ERROR "Not find Protobuf library")
+endif()
 
 if(UNIX)
     set(LINK_FLAGS "-lpthread -ldl -lgmp")
 endif()
 
-#find_library(soci_core
-#    NAMES soci_core
-#    HINTS "/home/jeffrey/QtC++/rippled/build/lib"
-#)
-#message("soci:" ${soci_core})
-#find_library(pthread
-#    NAMES libpthread.so)
-#message("pthread:" ${pthread})
-
-target_link_libraries(${PROJECT_NAME}  ${LINK_FLAGS}  ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES} ${protobuf})
+target_link_libraries(${PROJECT_NAME}  ${LINK_FLAGS}  ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES} ${PROTOBUF_LIBRARIES})
