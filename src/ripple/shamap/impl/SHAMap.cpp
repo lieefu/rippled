@@ -31,7 +31,6 @@ SHAMap::SHAMap (
     : f_ (f)
     , journal_(f.journal())
     , seq_ (seq)
-    , ledgerSeq_ (0)
     , state_ (SHAMapState::Modifying)
     , type_ (t)
 {
@@ -47,7 +46,6 @@ SHAMap::SHAMap (
     : f_ (f)
     , journal_(f.journal())
     , seq_ (1)
-    , ledgerSeq_ (0)
     , state_ (SHAMapState::Synching)
     , type_ (t)
 {
@@ -182,18 +180,19 @@ SHAMap::fetchNodeFromDB (SHAMapHash const& hash) const
 
 // See if a sync filter has a node
 std::shared_ptr<SHAMapAbstractNode>
-SHAMap::checkFilter(SHAMapHash const& hash, SHAMapNodeID const& id,
+SHAMap::checkFilter(SHAMapHash const& hash,
                     SHAMapSyncFilter* filter) const
 {
     std::shared_ptr<SHAMapAbstractNode> node;
     Blob nodeData;
-    if (filter->haveNode (id, hash, nodeData))
+    if (filter->haveNode (hash, nodeData))
     {
         node = SHAMapAbstractNode::make(
             nodeData, 0, snfPREFIX, hash, true, f_.journal ());
         if (node)
         {
-            filter->gotNode (true, id, hash, nodeData, node->getType ());
+            filter->gotNode (true, hash,
+                std::move(nodeData), node->getType ());
             if (backed_)
                 canonicalize (hash, node);
         }
@@ -204,7 +203,6 @@ SHAMap::checkFilter(SHAMapHash const& hash, SHAMapNodeID const& id,
 // Get a node without throwing
 // Used on maps where missing nodes are expected
 std::shared_ptr<SHAMapAbstractNode> SHAMap::fetchNodeNT(
-    SHAMapNodeID const& id,
     SHAMapHash const& hash,
     SHAMapSyncFilter* filter) const
 {
@@ -223,7 +221,7 @@ std::shared_ptr<SHAMapAbstractNode> SHAMap::fetchNodeNT(
     }
 
     if (filter)
-        node = checkFilter (hash, id, filter);
+        node = checkFilter (hash, filter);
 
     return node;
 }
@@ -324,7 +322,7 @@ SHAMap::descend (SHAMapInnerNode * parent, SHAMapNodeID const& parentID,
 
     if (!child)
     {
-        std::shared_ptr<SHAMapAbstractNode> childNode = fetchNodeNT (childID, childHash, filter);
+        std::shared_ptr<SHAMapAbstractNode> childNode = fetchNodeNT (childHash, filter);
 
         if (childNode)
         {
@@ -338,7 +336,7 @@ SHAMap::descend (SHAMapInnerNode * parent, SHAMapNodeID const& parentID,
 
 SHAMapAbstractNode*
 SHAMap::descendAsync (SHAMapInnerNode* parent, int branch,
-    SHAMapNodeID const& childID, SHAMapSyncFilter * filter, bool & pending) const
+    SHAMapSyncFilter * filter, bool & pending) const
 {
     pending = false;
 
@@ -352,7 +350,7 @@ SHAMap::descendAsync (SHAMapInnerNode* parent, int branch,
     if (!ptr)
     {
         if (filter)
-            ptr = checkFilter (hash, childID, filter);
+            ptr = checkFilter (hash, filter);
 
         if (!ptr && backed_)
         {
@@ -837,7 +835,7 @@ bool SHAMap::fetchRoot (SHAMapHash const& hash, SHAMapSyncFilter* filter)
         }
     }
 
-    auto newRoot = fetchNodeNT (SHAMapNodeID(), hash, filter);
+    auto newRoot = fetchNodeNT (hash, filter);
 
     if (newRoot)
     {
