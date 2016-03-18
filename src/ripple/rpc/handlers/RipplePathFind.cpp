@@ -49,24 +49,6 @@ namespace ripple {
 
 static unsigned int const max_paths = 4;
 
-static
-Json::Value
-buildSrcCurrencies(AccountID const& account,
-    std::shared_ptr<RippleLineCache> const& cache)
-{
-    auto currencies = accountSourceCurrencies(account, cache, true);
-    auto jvSrcCurrencies = Json::Value(Json::arrayValue);
-
-    for (auto const& uCurrency : currencies)
-    {
-        Json::Value jvCurrency(Json::objectValue);
-        jvCurrency[jss::currency] = to_string(uCurrency);
-        jvSrcCurrencies.append(jvCurrency);
-    }
-
-    return jvSrcCurrencies;
-}
-
 // This interface is deprecated.
 Json::Value doRipplePathFind (RPC::Context& context)
 {
@@ -75,24 +57,13 @@ Json::Value doRipplePathFind (RPC::Context& context)
 
     context.loadType = Resource::feeHighBurdenRPC;
 
-    AccountID raSrc;
-    AccountID raDst;
-    STAmount saDstAmount;
     std::shared_ptr <ReadView const> lpLedger;
-
     Json::Value jvResult;
 
-    if (context.app.config().RUN_STANDALONE ||
-        context.params.isMember(jss::ledger) ||
-        context.params.isMember(jss::ledger_index) ||
-        context.params.isMember(jss::ledger_hash))
-    {
-        // The caller specified a ledger
-        jvResult = RPC::lookupLedger (lpLedger, context);
-        if (!lpLedger)
-            return jvResult;
-    }
-    else
+    if (! context.app.config().RUN_STANDALONE &&
+        ! context.params.isMember(jss::ledger) &&
+        ! context.params.isMember(jss::ledger_index) &&
+        ! context.params.isMember(jss::ledger_hash))
     {
         if (context.app.getLedgerMaster().getValidatedLedgerAge() >
             RPC::Tuning::maxValidatedLedgerAge)
@@ -105,7 +76,7 @@ Json::Value doRipplePathFind (RPC::Context& context)
 
         jvResult = context.app.getPathRequests().makeLegacyPathRequest (
             request, std::bind(&JobCoro::post, context.jobCoro),
-                lpLedger, context.params);
+                context.consumer, lpLedger, context.params);
         if (request)
         {
             context.jobCoro->yield();
@@ -115,10 +86,18 @@ Json::Value doRipplePathFind (RPC::Context& context)
         return jvResult;
     }
 
+    // The caller specified a ledger
+    jvResult = RPC::lookupLedger (lpLedger, context);
+    if (! lpLedger)
+        return jvResult;
+
     RPC::LegacyPathFind lpf (isUnlimited (context.role), context.app);
     if (! lpf.isOk ())
         return rpcError (rpcTOO_BUSY);
 
+    AccountID raSrc;
+    AccountID raDst;
+    STAmount saDstAmount;
     if (! context.params.isMember (jss::source_account))
     {
         jvResult = rpcError (rpcSRC_ACT_MISSING);
@@ -147,19 +126,19 @@ Json::Value doRipplePathFind (RPC::Context& context)
             && (!saDstAmount.getIssuer () ||
                 noAccount() == saDstAmount.getIssuer ())))
     {
-        JLOG (context.j.info) << "Bad destination_amount.";
+        JLOG (context.j.info()) << "Bad destination_amount.";
         jvResult    = rpcError (rpcINVALID_PARAMS);
     }
     else if (
         // Checks on source_currencies.
-        context.params.isMember (jss::source_currencies)
-        && (!context.params[jss::source_currencies].isArray ()
-            || !context.params[jss::source_currencies].size ())
-        // Don't allow empty currencies.
-    )
+        context.params.isMember(jss::source_currencies) &&
+            (! context.params[jss::source_currencies].isArray() ||
+                context.params[jss::source_currencies].size() == 0 ||
+                    context.params[jss::source_currencies].size() >
+                        RPC::Tuning::max_src_cur))
     {
-        JLOG (context.j.info) << "Bad source_currencies.";
-        jvResult    = rpcError (rpcINVALID_PARAMS);
+        JLOG (context.j.info()) << "Bad source_currencies.";
+        jvResult = rpcError(rpcINVALID_PARAMS);
     }
     else
     {
@@ -182,15 +161,19 @@ Json::Value doRipplePathFind (RPC::Context& context)
         if (context.params.isMember (jss::source_currencies))
         {
             jvSrcCurrencies = context.params[jss::source_currencies];
-            if (! jvSrcCurrencies.isArray() ||
-                    jvSrcCurrencies.size() > RPC::Tuning::max_src_cur)
-                return rpcError(rpcSRC_CUR_MALFORMED);
         }
         else
         {
-            jvSrcCurrencies = buildSrcCurrencies(raSrc, cache);
-            if (jvSrcCurrencies.size() > RPC::Tuning::max_auto_src_cur)
+            auto currencies = accountSourceCurrencies(raSrc, cache, true);
+            if (currencies.size() > RPC::Tuning::max_auto_src_cur)
                 return rpcError(rpcINTERNAL);
+            auto jvSrcCurrencies = Json::Value(Json::arrayValue);
+            for (auto const& c : currencies)
+            {
+                Json::Value jvCurrency(Json::objectValue);
+                jvCurrency[jss::currency] = to_string(c);
+                jvSrcCurrencies.append(jvCurrency);
+            }
         }
 
         // Fill in currencies destination will accept
@@ -258,7 +241,7 @@ Json::Value doRipplePathFind (RPC::Context& context)
         jvResult[jss::alternatives] = pathFindResult.second;
     }
 
-    JLOG (context.j.debug)
+    JLOG (context.j.debug())
             << "ripple_path_find< " << jvResult;
 
     return jvResult;
@@ -296,57 +279,53 @@ ripplePathFind (std::shared_ptr<RippleLineCache> const& cache,
 
     auto j = app.journal ("RPCHandler");
 
-    for (unsigned int i = 0; i != jvSrcCurrencies.size(); ++i)
+    for (auto const& c : jvSrcCurrencies)
     {
-        Json::Value jvSource = jvSrcCurrencies[i];
-
-        Currency uSrcCurrencyID;
-        AccountID uSrcIssuerID;
-
-        if (!jvSource.isObject())
+        if (! c.isObject())
             return std::make_pair(false, rpcError(rpcINVALID_PARAMS));
 
-        // Parse mandatory currency.
-        if (!jvSource.isMember(jss::currency)
-            || !to_currency(
-            uSrcCurrencyID, jvSource[jss::currency].asString()))
+        // Mandatory currency
+        Currency srcCurrencyID;
+        if (! c.isMember(jss::currency) ||
+            ! to_currency(srcCurrencyID, c[jss::currency].asString()))
         {
-            JLOG (j.info) << "Bad currency.";
+            JLOG (j.info()) << "Bad currency.";
             return std::make_pair(false, rpcError(rpcSRC_CUR_MALFORMED));
         }
 
-        if (uSrcCurrencyID.isNonZero())
-            uSrcIssuerID = raSrc;
-
-        // Parse optional issuer.
-        if (jvSource.isMember(jss::issuer) &&
-            ((!jvSource[jss::issuer].isString() ||
-            !to_issuer(uSrcIssuerID, jvSource[jss::issuer].asString())) ||
-            (uSrcIssuerID.isZero() != uSrcCurrencyID.isZero()) ||
-            (noAccount() == uSrcIssuerID)))
+        // Optional issuer
+        AccountID srcIssuerID;
+        if (c.isMember (jss::issuer) &&
+            (! c[jss::issuer].isString() ||
+                ! to_issuer(srcIssuerID, c[jss::issuer].asString()) ||
+                    srcIssuerID.isZero() != srcCurrencyID.isZero() ||
+                        noAccount() == srcIssuerID))
         {
-            JLOG (j.info) << "Bad issuer.";
+            JLOG (j.info()) << "Bad issuer.";
             return std::make_pair(false, rpcError(rpcSRC_ISR_MALFORMED));
         }
 
-        auto issue = Issue(uSrcCurrencyID, uSrcIssuerID);
+        if (srcIssuerID.isZero())
+            srcIssuerID = raSrc;
+
+        auto issue = Issue(srcCurrencyID, srcIssuerID);
         if (saSendMax)
         {
             // If the currencies don't match, ignore the source currency.
-            if (uSrcCurrencyID != saSendMax->getCurrency())
+            if (srcCurrencyID != saSendMax->getCurrency())
                 continue;
 
             // If neither is the source and they are not equal, then the
             // source issuer is illegal.
-            if (uSrcIssuerID != raSrc && saSendMax->getIssuer() != raSrc &&
-                uSrcIssuerID != saSendMax->getIssuer())
+            if (srcIssuerID != raSrc && saSendMax->getIssuer() != raSrc &&
+                srcIssuerID != saSendMax->getIssuer())
             {
                 return std::make_pair(false, rpcError(rpcSRC_ISR_MALFORMED));
             }
 
             // If both are the source, use the source.
             // Otherwise, use the one that's not the source.
-            if (uSrcIssuerID == raSrc)
+            if (srcIssuerID == raSrc)
             {
                 issue.account = saSendMax->getIssuer() != raSrc ?
                     saSendMax->getIssuer() : raSrc;
@@ -363,7 +342,7 @@ ripplePathFind (std::shared_ptr<RippleLineCache> const& cache,
                 return std::make_pair(false, paths.error);
 
             spsComputed = paths.object->getFieldPathSet(sfPaths);
-            JLOG (j.trace) << "ripple_path_find: Paths: " <<
+            JLOG (j.trace()) << "ripple_path_find: Paths: " <<
                 spsComputed.getJson(0);
         }
 
@@ -371,21 +350,39 @@ ripplePathFind (std::shared_ptr<RippleLineCache> const& cache,
             currency_map, issue.currency, saDstAmount, level, app);
         if (! pathfinder)
         {
-            JLOG (j.warning) << "ripple_path_find: No paths found.";
+            JLOG (j.warn()) << "ripple_path_find: No paths found.";
             continue;
         }
 
         STPath fullLiquidityPath;
         auto ps = pathfinder->getBestPaths(max_paths,
             fullLiquidityPath, spsComputed, issue.account);
-        auto& issuer =
-            isXRP(uSrcIssuerID) ?
-            isXRP(uSrcCurrencyID) ? // Default to source account.
-            xrpAccount() :
-            (raSrc)
-            : uSrcIssuerID;            // Use specifed issuer.
-        STAmount saMaxAmount = saSendMax.value_or(
-            STAmount({uSrcCurrencyID, issuer}, 1u, 0, true));
+
+        STAmount saMaxAmount;
+        if (saSendMax)
+        {
+            saMaxAmount = *saSendMax;
+        }
+        else
+        {
+            AccountID issuerID;
+            if (isXRP(srcIssuerID))
+            {
+                // Default to source account.
+                if(isXRP(srcCurrencyID))
+                    issuerID = xrpAccount();
+                else
+                    issuerID = raSrc;
+            }
+            else
+            {
+                // Use specifed issuer.
+                issuerID = srcIssuerID;
+            }
+
+            saMaxAmount = STAmount(
+                {srcCurrencyID, issuerID}, 1u, 0, true);
+        }
 
         boost::optional<PaymentSandbox> sandbox;
         sandbox.emplace(&*cache->getLedger(), tapNONE);
@@ -404,9 +401,10 @@ ripplePathFind (std::shared_ptr<RippleLineCache> const& cache,
             raSrc,          // --> Account sending from.
             ps,             // --> Path set.
             app.logs(),
+            app.config(),
             &rcInput);
 
-        JLOG(j.info)
+        JLOG(j.info())
             << "ripple_path_find:"
             << " saMaxAmount=" << saMaxAmount
             << " saDstAmount=" << saDstAmount
@@ -418,7 +416,7 @@ ripplePathFind (std::shared_ptr<RippleLineCache> const& cache,
             (rc.result() == terNO_LINE || rc.result() == tecPATH_PARTIAL))
         {
             auto jpr = app.journal("PathRequest");
-            JLOG(jpr.debug)
+            JLOG(jpr.debug())
                 << "Trying with an extra path element";
             ps.push_back(fullLiquidityPath);
             sandbox.emplace(&*cache->getLedger(), tapNONE);
@@ -431,8 +429,9 @@ ripplePathFind (std::shared_ptr<RippleLineCache> const& cache,
                 raDst,          // --> Account to deliver to.
                 raSrc,          // --> Account sending from.
                 ps,             // --> Path set.
-                app.logs());
-            JLOG(jpr.debug)
+                app.logs(),
+                app.config());
+            JLOG(jpr.debug())
                 << "Extra path element gives "
                 << transHuman(rc.result());
         }
@@ -461,7 +460,7 @@ ripplePathFind (std::shared_ptr<RippleLineCache> const& cache,
             std::string strToken;
             std::string strHuman;
             transResultInfo(rc.result(), strToken, strHuman);
-            JLOG (j.debug)
+            JLOG (j.debug())
                 << "ripple_path_find: "
                 << strToken << " "
                 << strHuman << " "

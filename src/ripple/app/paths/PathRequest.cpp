@@ -32,6 +32,7 @@
 #include <ripple/protocol/UintTypes.h>
 #include <ripple/rpc/impl/Tuning.h>
 #include <beast/module/core/text/LexicalCast.h>
+#include <boost/algorithm/clamp.hpp>
 #include <boost/optional.hpp>
 #include <tuple>
 
@@ -47,6 +48,7 @@ PathRequest::PathRequest (
         , m_journal (journal)
         , mOwner (owner)
         , wpSubscriber (subscriber)
+        , consumer_(subscriber->getConsumer())
         , jvStatus (Json::objectValue)
         , mLastIndex (0)
         , mInProgress (false)
@@ -55,13 +57,14 @@ PathRequest::PathRequest (
         , iIdentifier (id)
         , created_ (std::chrono::steady_clock::now())
 {
-    if (m_journal.debug)
-        m_journal.debug << iIdentifier << " created";
+    JLOG(m_journal.debug())
+        << iIdentifier << " created";
 }
 
 PathRequest::PathRequest (
     Application& app,
     std::function <void(void)> const& completion,
+    Resource::Consumer& consumer,
     int id,
     PathRequests& owner,
     beast::Journal journal)
@@ -69,6 +72,7 @@ PathRequest::PathRequest (
         , m_journal (journal)
         , mOwner (owner)
         , fCompletion (completion)
+        , consumer_ (consumer)
         , jvStatus (Json::objectValue)
         , mLastIndex (0)
         , mInProgress (false)
@@ -77,14 +81,15 @@ PathRequest::PathRequest (
         , iIdentifier (id)
         , created_ (std::chrono::steady_clock::now())
 {
-    if (m_journal.debug)
-        m_journal.debug << iIdentifier << " created";
+    JLOG(m_journal.debug())
+        << iIdentifier << " created";
 }
 
 PathRequest::~PathRequest()
 {
     using namespace std::chrono;
-    if (! m_journal.info)
+    auto stream = m_journal.info();
+    if (! stream)
         return;
 
     std::string fast, full;
@@ -102,8 +107,8 @@ PathRequest::~PathRequest()
             duration_cast<milliseconds>(full_reply_ - created_).count());
         full += "ms";
     }
-    m_journal.info << iIdentifier << " complete:" << fast << full <<
-    " total:" << duration_cast<milliseconds>(steady_clock::now() -
+    stream << iIdentifier << " complete:" << fast << full <<
+        " total:" << duration_cast<milliseconds>(steady_clock::now() -
         created_).count() << "ms";
 }
 
@@ -246,18 +251,18 @@ PathRequest::doCreate (
             doUpdate(cache, true);
     }
 
-    if (m_journal.debug)
+    if (auto stream = m_journal.debug())
     {
         if (valid)
         {
-            m_journal.debug << iIdentifier <<
+            stream << iIdentifier <<
                 " valid: " << toBase58(*raSrcAccount);
-            m_journal.debug << iIdentifier <<
+            stream << iIdentifier <<
                 " deliver: " << saDstAmount.getFullText ();
         }
         else
         {
-            m_journal.debug << iIdentifier << " invalid";
+            stream << iIdentifier << " invalid";
         }
     }
 
@@ -343,9 +348,9 @@ int PathRequest::parseJson (Json::Value const& jvParams)
 
     if (jvParams.isMember (jss::source_currencies))
     {
-        Json::Value const& jvSrcCur = jvParams[jss::source_currencies];
-
-        if (! jvSrcCur.isArray() || jvSrcCur.size() > RPC::Tuning::max_src_cur)
+        Json::Value const& jvSrcCurrencies = jvParams[jss::source_currencies];
+        if (! jvSrcCurrencies.isArray() || jvSrcCurrencies.size() == 0 ||
+            jvSrcCurrencies.size() > RPC::Tuning::max_src_cur)
         {
             jvStatus = rpcError (rpcSRC_CUR_MALFORMED);
             return PFR_PJ_INVALID;
@@ -353,44 +358,51 @@ int PathRequest::parseJson (Json::Value const& jvParams)
 
         sciSourceCurrencies.clear ();
 
-        for (unsigned i = 0; i < jvSrcCur.size (); ++i)
+        for (auto const& c : jvSrcCurrencies)
         {
-            Json::Value const& jvCur = jvSrcCur[i];
-            Currency uCur;
-            if (! jvCur.isObject() ||
-                ! jvCur.isMember (jss::currency) ||
-                ! to_currency (uCur, jvCur[jss::currency].asString ()))
+            // Mandatory currency
+            Currency srcCurrencyID;
+            if (! c.isObject() ||
+                ! c.isMember(jss::currency) ||
+                ! to_currency(srcCurrencyID, c[jss::currency].asString()))
             {
                 jvStatus = rpcError (rpcSRC_CUR_MALFORMED);
                 return PFR_PJ_INVALID;
             }
 
-            AccountID uIss;
-            if (jvCur.isMember (jss::issuer) &&
-                !to_issuer (uIss, jvCur[jss::issuer].asString ()))
+            // Optional issuer
+            AccountID srcIssuerID;
+            if (c.isMember (jss::issuer) &&
+                (! c[jss::issuer].isString() ||
+                    ! to_issuer(srcIssuerID, c[jss::issuer].asString())))
             {
                 jvStatus = rpcError (rpcSRC_ISR_MALFORMED);
-            }
-
-            if (uCur.isZero () && uIss.isNonZero ())
-            {
-                jvStatus = rpcError (rpcSRC_CUR_MALFORMED);
                 return PFR_PJ_INVALID;
             }
 
-            if (uCur.isNonZero() && uIss.isZero())
-                uIss = *raSrcAccount;
+            if (srcCurrencyID.isZero())
+            {
+                if (srcIssuerID.isNonZero())
+                {
+                    jvStatus = rpcError(rpcSRC_CUR_MALFORMED);
+                    return PFR_PJ_INVALID;
+                }
+            }
+            else if (srcIssuerID.isZero())
+            {
+                srcIssuerID = *raSrcAccount;
+            }
 
             if (saSendMax)
             {
                 // If the currencies don't match, ignore the source currency.
-                if (uCur == saSendMax->getCurrency())
+                if (srcCurrencyID == saSendMax->getCurrency())
                 {
                     // If neither is the source and they are not equal, then the
                     // source issuer is illegal.
-                    if (uIss != *raSrcAccount &&
+                    if (srcIssuerID != *raSrcAccount &&
                         saSendMax->getIssuer() != *raSrcAccount &&
-                        uIss != saSendMax->getIssuer())
+                            srcIssuerID != saSendMax->getIssuer())
                     {
                         jvStatus = rpcError (rpcSRC_ISR_MALFORMED);
                         return PFR_PJ_INVALID;
@@ -398,17 +410,26 @@ int PathRequest::parseJson (Json::Value const& jvParams)
 
                     // If both are the source, use the source.
                     // Otherwise, use the one that's not the source.
-                    if (uIss != *raSrcAccount)
-                        sciSourceCurrencies.insert({uCur, uIss});
+                    if (srcIssuerID != *raSrcAccount)
+                    {
+                        sciSourceCurrencies.insert(
+                            {srcCurrencyID, srcIssuerID});
+                    }
                     else if (saSendMax->getIssuer() != *raSrcAccount)
-                        sciSourceCurrencies.insert({uCur, saSendMax->getIssuer()});
+                    {
+                        sciSourceCurrencies.insert(
+                            {srcCurrencyID, saSendMax->getIssuer()});
+                    }
                     else
-                        sciSourceCurrencies.insert({uCur, *raSrcAccount});
+                    {
+                        sciSourceCurrencies.insert(
+                            {srcCurrencyID, *raSrcAccount});
+                    }
                 }
             }
             else
             {
-                sciSourceCurrencies.insert({uCur, uIss});
+                sciSourceCurrencies.insert({srcCurrencyID, srcIssuerID});
             }
         }
     }
@@ -421,7 +442,7 @@ int PathRequest::parseJson (Json::Value const& jvParams)
 
 Json::Value PathRequest::doClose (Json::Value const&)
 {
-    m_journal.debug << iIdentifier << " closed";
+    JLOG(m_journal.debug()) << iIdentifier << " closed";
     ScopedLockType sl (mLock);
     jvStatus[jss::closed] = true;
     return jvStatus;
@@ -454,15 +475,15 @@ PathRequest::getPathFinder(std::shared_ptr<RippleLineCache> const& cache,
 }
 
 bool
-PathRequest::findPaths (std::shared_ptr<RippleLineCache> const& cache, int const level,
-    Json::Value& jvArray)
+PathRequest::findPaths (std::shared_ptr<RippleLineCache> const& cache,
+    int const level, Json::Value& jvArray)
 {
     auto sourceCurrencies = sciSourceCurrencies;
     if (sourceCurrencies.empty ())
     {
-        auto usCurrencies = accountSourceCurrencies(*raSrcAccount, cache, true);
+        auto currencies = accountSourceCurrencies(*raSrcAccount, cache, true);
         bool const sameAccount = *raSrcAccount == *raDstAccount;
-        for (auto const& c : usCurrencies)
+        for (auto const& c : currencies)
         {
             if (! sameAccount || c != saDstAmount.getCurrency())
             {
@@ -480,7 +501,7 @@ PathRequest::findPaths (std::shared_ptr<RippleLineCache> const& cache, int const
     hash_map<Currency, std::unique_ptr<Pathfinder>> currency_map;
     for (auto const& issue : sourceCurrencies)
     {
-        JLOG(m_journal.debug)
+        JLOG(m_journal.debug())
             << iIdentifier
             << " Trying to find paths: "
             << STAmount(issue, 1).getFullText();
@@ -490,7 +511,7 @@ PathRequest::findPaths (std::shared_ptr<RippleLineCache> const& cache, int const
         if (! pathfinder)
         {
             assert(false);
-            m_journal.debug << iIdentifier << " No paths found";
+            JLOG(m_journal.debug()) << iIdentifier << " No paths found";
             continue;
         }
 
@@ -507,7 +528,7 @@ PathRequest::findPaths (std::shared_ptr<RippleLineCache> const& cache, int const
         STAmount saMaxAmount = saSendMax.value_or(
             STAmount({issue.currency, sourceAccount}, 1u, 0, true));
 
-        m_journal.debug << iIdentifier
+        JLOG(m_journal.debug()) << iIdentifier
             << " Paths found, calling rippleCalc";
 
         path::RippleCalc::Input rcInput;
@@ -524,13 +545,14 @@ PathRequest::findPaths (std::shared_ptr<RippleLineCache> const& cache, int const
             *raSrcAccount,  // --> Account sending from.
             ps,             // --> Path set.
             app_.logs(),
+            app_.config(),
             &rcInput);
 
         if (! convert_all_ &&
             ! fullLiquidityPath.empty() &&
             (rc.result() == terNO_LINE || rc.result() == tecPATH_PARTIAL))
         {
-            m_journal.debug << iIdentifier
+            JLOG(m_journal.debug()) << iIdentifier
                 << " Trying with an extra path element";
 
             ps.push_back(fullLiquidityPath);
@@ -544,17 +566,18 @@ PathRequest::findPaths (std::shared_ptr<RippleLineCache> const& cache, int const
                 *raDstAccount,  // --> Account to deliver to.
                 *raSrcAccount,  // --> Account sending from.
                 ps,             // --> Path set.
-                app_.logs());
+                app_.logs(),
+                app_.config());
 
             if (rc.result() != tesSUCCESS)
             {
-                m_journal.warning << iIdentifier
+                JLOG(m_journal.warn()) << iIdentifier
                     << " Failed with covering path "
                     << transHuman(rc.result());
             }
             else
             {
-                m_journal.debug << iIdentifier
+                JLOG(m_journal.debug()) << iIdentifier
                     << " Extra path element gives "
                     << transHuman(rc.result());
             }
@@ -580,18 +603,27 @@ PathRequest::findPaths (std::shared_ptr<RippleLineCache> const& cache, int const
         }
         else
         {
-            m_journal.debug << iIdentifier << " rippleCalc returns "
+            JLOG(m_journal.debug()) << iIdentifier << " rippleCalc returns "
                 << transHuman(rc.result());
         }
     }
 
+    /*  The resource fee is based on the number of source currencies used.
+        The minimum cost is 50 and the maximum is 400. The cost increases
+        after four source currencies, 50 - (4 * 4) = 34.
+    */
+    int const size = sourceCurrencies.size();
+    consumer_.charge({boost::algorithm::clamp(size * size + 34, 50, 400),
+        "path update"});
     return true;
 }
 
-Json::Value PathRequest::doUpdate (std::shared_ptr<RippleLineCache> const& cache, bool fast)
+Json::Value PathRequest::doUpdate(
+    std::shared_ptr<RippleLineCache> const& cache, bool fast)
 {
     using namespace std::chrono;
-    m_journal.debug << iIdentifier << " update " << (fast ? "fast" : "normal");
+    JLOG(m_journal.debug()) << iIdentifier
+        << " update " << (fast ? "fast" : "normal");
 
     {
         ScopedLockType sl (mLock);
@@ -653,7 +685,8 @@ Json::Value PathRequest::doUpdate (std::shared_ptr<RippleLineCache> const& cache
             --iLevel;
     }
 
-    m_journal.debug << iIdentifier << " processing at level " << iLevel;
+    JLOG(m_journal.debug()) << iIdentifier
+        << " processing at level " << iLevel;
 
     Json::Value& jvArray = (newStatus[jss::alternatives] = Json::arrayValue);
     if (! findPaths(cache, iLevel, jvArray))

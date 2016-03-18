@@ -31,6 +31,14 @@
 
 namespace ripple {
 
+bool flowV2Switchover (NetClock::time_point const closeTime)
+{
+    using namespace std::chrono_literals;
+    // Mon March 28, 2016 10:00:00am PST
+    static NetClock::time_point const soTime{512503200s};
+    return closeTime > soTime;
+}
+
 // VFALCO NOTE A copy of the other one for now
 /** Maximum number of entries in a directory page
     A change would be protocol-breaking.
@@ -119,7 +127,7 @@ accountHolds (ReadView const& view,
             amount.clear ();
         else
             amount = balance - reserve;
-        JLOG (j.trace) << "accountHolds:" <<
+        JLOG (j.trace()) << "accountHolds:" <<
             " account=" << to_string (account) <<
             " amount=" << amount.getFullText () <<
             " balance=" << to_string (balance) <<
@@ -149,7 +157,7 @@ accountHolds (ReadView const& view,
             }
             amount.setIssuer (issuer);
         }
-        JLOG (j.trace) << "accountHolds:" <<
+        JLOG (j.trace()) << "accountHolds:" <<
             " account=" << to_string (account) <<
             " amount=" << amount.getFullText ();
     }
@@ -169,7 +177,7 @@ accountFunds (ReadView const& view, AccountID const& id,
         saDefault.getIssuer () == id)
     {
         saFunds = saDefault;
-        JLOG (j.trace) << "accountFunds:" <<
+        JLOG (j.trace()) << "accountFunds:" <<
             " account=" << to_string (id) <<
             " saDefault=" << saDefault.getFullText () <<
             " SELF-FUNDED";
@@ -179,7 +187,7 @@ accountFunds (ReadView const& view, AccountID const& id,
         saFunds = accountHolds(view, id,
             saDefault.getCurrency(), saDefault.getIssuer(),
                 freezeHandling, j);
-        JLOG (j.trace) << "accountFunds:" <<
+        JLOG (j.trace()) << "accountFunds:" <<
             " account=" << to_string (id) <<
             " saDefault=" << saDefault.getFullText () <<
             " saFunds=" << saFunds.getFullText ();
@@ -453,7 +461,7 @@ cdirNext (ReadView const& view,
         if (!sleNext)
         {
             // This should never happen
-            JLOG (j.fatal)
+            JLOG (j.fatal())
                     << "Corrupt directory: index:"
                     << uRootIndex << " next:" << uNodeNext;
             return false;
@@ -463,7 +471,7 @@ cdirNext (ReadView const& view,
             sleNode, uDirEntry, uEntryIndex, j);
     }
     uEntryIndex = svIndexes[uDirEntry++];
-    JLOG (j.trace) << "dirNext:" <<
+    JLOG (j.trace()) << "dirNext:" <<
         " uDirEntry=" << uDirEntry <<
         " uEntryIndex=" << uEntryIndex;
     return true;
@@ -516,7 +524,7 @@ hashOfSeq (ReadView const& ledger, LedgerIndex seq,
     // Easy cases...
     if (seq > ledger.seq())
     {
-        JLOG (journal.warning) <<
+        JLOG (journal.warn()) <<
             "Can't get seq " << seq <<
             " from " << ledger.seq() << " future";
         return boost::none;
@@ -540,21 +548,21 @@ hashOfSeq (ReadView const& ledger, LedgerIndex seq,
                 STVector256 vec = hashIndex->getFieldV256 (sfHashes);
                 if (vec.size () >= diff)
                     return vec[vec.size () - diff];
-                JLOG (journal.warning) <<
+                JLOG (journal.warn()) <<
                     "Ledger " << ledger.seq() <<
                     " missing hash for " << seq <<
                     " (" << vec.size () << "," << diff << ")";
             }
             else
             {
-                JLOG (journal.warning) <<
+                JLOG (journal.warn()) <<
                     "Ledger " << ledger.seq() <<
                     ":" << ledger.info().hash << " missing normal list";
             }
         }
         if ((seq & 0xff) != 0)
         {
-            JLOG (journal.debug) <<
+            JLOG (journal.debug()) <<
                 "Can't get seq " << seq <<
                 " from " << ledger.seq() << " past";
             return boost::none;
@@ -575,7 +583,7 @@ hashOfSeq (ReadView const& ledger, LedgerIndex seq,
         if (vec.size () > diff)
             return vec[vec.size () - diff - 1];
     }
-    JLOG (journal.warning) <<
+    JLOG (journal.warn()) <<
         "Can't get seq " << seq <<
         " from " << ledger.seq() << " error";
     return boost::none;
@@ -601,7 +609,7 @@ adjustOwnerCount (ApplyView& view,
         // Overflow is well defined on unsigned
         if (adjusted < current)
         {
-            JLOG (j.fatal) <<
+            JLOG (j.fatal()) <<
                 "Account " << sle->getAccountID(sfAccount) <<
                 " owner count exceeds max!";
             adjusted =
@@ -613,7 +621,7 @@ adjustOwnerCount (ApplyView& view,
         // Underflow is well defined on unsigned
         if (adjusted > current)
         {
-            JLOG (j.fatal) <<
+            JLOG (j.fatal()) <<
                 "Account " << sle->getAccountID (sfAccount) <<
                 " owner count set below 0!";
             adjusted = 0;
@@ -663,7 +671,7 @@ dirNext (ApplyView& view,
         if (!sleNext)
         {
             // This should never happen
-            JLOG (j.fatal)
+            JLOG (j.fatal())
                     << "Corrupt directory: index:"
                     << uRootIndex << " next:" << uNodeNext;
             return false;
@@ -673,7 +681,7 @@ dirNext (ApplyView& view,
             sleNode, uDirEntry, uEntryIndex, j);
     }
     uEntryIndex = svIndexes[uDirEntry++];
-    JLOG (j.trace) << "dirNext:" <<
+    JLOG (j.trace()) << "dirNext:" <<
         " uDirEntry=" << uDirEntry <<
         " uEntryIndex=" << uEntryIndex;
     return true;
@@ -696,7 +704,7 @@ dirAdd (ApplyView& view,
     std::function<void (SLE::ref, bool)>    fDescriber,
     beast::Journal j)
 {
-    JLOG (j.trace) << "dirAdd:" <<
+    JLOG (j.trace()) << "dirAdd:" <<
         " uRootIndex=" << to_string (uRootIndex) <<
         " uLedgerIndex=" << to_string (uLedgerIndex);
 
@@ -772,11 +780,11 @@ dirAdd (ApplyView& view,
     svIndexes.push_back (uLedgerIndex); // Append entry.
     sleNode->setFieldV256 (sfIndexes, svIndexes);   // Save entry.
 
-    JLOG (j.trace) <<
+    JLOG (j.trace()) <<
         "dirAdd:   creating: root: " << to_string (uRootIndex);
-    JLOG (j.trace) <<
+    JLOG (j.trace()) <<
         "dirAdd:  appending: Entry: " << to_string (uLedgerIndex);
-    JLOG (j.trace) <<
+    JLOG (j.trace()) <<
         "dirAdd:  appending: Node: " << strHex (uNodeDir);
 
     return tesSUCCESS;
@@ -799,7 +807,7 @@ dirDelete (ApplyView& view,
 
     if (!sleNode)
     {
-        JLOG (j.warning) << "dirDelete: no such node:" <<
+        JLOG (j.warn()) << "dirDelete: no such node:" <<
             " uRootIndex=" << to_string (uRootIndex) <<
             " uNodeDir=" << strHex (uNodeDir) <<
             " uLedgerIndex=" << to_string (uLedgerIndex);
@@ -831,7 +839,7 @@ dirDelete (ApplyView& view,
         if (!bSoft)
         {
             assert (false);
-            JLOG (j.warning) << "dirDelete: no such entry";
+            JLOG (j.warn()) << "dirDelete: no such entry";
             return tefBAD_LEDGER;
         }
 
@@ -921,13 +929,13 @@ dirDelete (ApplyView& view,
             assert (slePrevious);
             if (!slePrevious)
             {
-                JLOG (j.warning) << "dirDelete: previous node is missing";
+                JLOG (j.warn()) << "dirDelete: previous node is missing";
                 return tefBAD_LEDGER;
             }
             assert (sleNext);
             if (!sleNext)
             {
-                JLOG (j.warning) << "dirDelete: next node is missing";
+                JLOG (j.warn()) << "dirDelete: next node is missing";
                 return tefBAD_LEDGER;
             }
 
@@ -989,7 +997,7 @@ trustCreate (ApplyView& view,
     std::uint32_t uQualityOut,
     beast::Journal j)
 {
-    JLOG (j.trace)
+    JLOG (j.trace())
         << "trustCreate: " << to_string (uSrcAccountID) << ", "
         << to_string (uDstAccountID) << ", " << saBalance.getFullText ();
 
@@ -1104,7 +1112,7 @@ trustDelete (ApplyView& view,
     std::uint64_t uHighNode   = sleRippleState->getFieldU64 (sfHighNode);
     TER         terResult;
 
-    JLOG (j.trace)
+    JLOG (j.trace())
         << "trustDelete: Deleting ripple line: low";
     terResult   = dirDelete(view,
         false,
@@ -1117,7 +1125,7 @@ trustDelete (ApplyView& view,
 
     if (tesSUCCESS == terResult)
     {
-        JLOG (j.trace)
+        JLOG (j.trace())
                 << "trustDelete: Deleting ripple line: high";
         terResult   = dirDelete (view,
             false,
@@ -1129,7 +1137,7 @@ trustDelete (ApplyView& view,
             j);
     }
 
-    JLOG (j.trace) << "trustDelete: Deleting ripple line: state";
+    JLOG (j.trace()) << "trustDelete: Deleting ripple line: state";
     view.erase(sleRippleState);
 
     return terResult;
@@ -1204,7 +1212,7 @@ rippleCredit (ApplyView& view,
 
         saBalance.setIssuer (noAccount());
 
-        JLOG (j.debug) << "rippleCredit: "
+        JLOG (j.debug()) << "rippleCredit: "
             "create line: " << to_string (uSenderID) <<
             " -> " << to_string (uReceiverID) <<
             " : " << saAmount.getFullText ();
@@ -1243,7 +1251,7 @@ rippleCredit (ApplyView& view,
 
         saBalance   -= saAmount;
 
-        JLOG (j.trace) << "rippleCredit: " <<
+        JLOG (j.trace()) << "rippleCredit: " <<
             to_string (uSenderID) <<
             " -> " << to_string (uReceiverID) <<
             " : before=" << saBefore.getFullText () <<
@@ -1332,7 +1340,7 @@ rippleTransferFee (ReadView const& view,
                 saAmount, amountFromRate (uTransitRate), saAmount.issue ());
             STAmount saTransferFee = saTransferTotal - saAmount;
 
-            JLOG (j.debug) << "rippleTransferFee:" <<
+            JLOG (j.debug()) << "rippleTransferFee:" <<
                 " saTransferFee=" << saTransferFee.getFullText ();
 
             return saTransferFee;
@@ -1344,7 +1352,7 @@ rippleTransferFee (ReadView const& view,
 
 // Send regardless of limits.
 // --> saAmount: Amount/currency/issuer to deliver to reciever.
-// <-- saActual: Amount actually cost.  Sender pay's fees.
+// <-- saActual: Amount actually cost.  Sender pays fees.
 static
 TER
 rippleSend (ApplyView& view,
@@ -1352,7 +1360,6 @@ rippleSend (ApplyView& view,
     STAmount const& saAmount, STAmount& saActual, beast::Journal j)
 {
     auto const issuer   = saAmount.getIssuer ();
-    TER             terResult;
 
     assert (!isXRP (uSenderID) && !isXRP (uReceiverID));
     assert (uSenderID != uReceiverID);
@@ -1361,32 +1368,42 @@ rippleSend (ApplyView& view,
     {
         // Direct send: redeeming IOUs and/or sending own IOUs.
         rippleCredit (view, uSenderID, uReceiverID, saAmount, false, j);
-        saActual    = saAmount;
-        terResult   = tesSUCCESS;
+        saActual = saAmount;
+        return tesSUCCESS;
+    }
+
+    // Sending 3rd party IOUs: transit.
+
+    // Calculate the amount to transfer accounting
+    // for any transfer fees:
+    if (!flowV2Switchover (view.info ().parentCloseTime))
+    {
+        STAmount const saTransitFee = rippleTransferFee (
+            view, uSenderID, uReceiverID, issuer, saAmount, j);
+
+        saActual = !saTransitFee ? saAmount : saAmount + saTransitFee;
+        saActual.setIssuer (issuer);  // XXX Make sure this done in + above.
     }
     else
     {
-        // Sending 3rd party IOUs: transit.
-
-        STAmount saTransitFee = rippleTransferFee (view,
-            uSenderID, uReceiverID, issuer, saAmount, j);
-
-        saActual = !saTransitFee ? saAmount : saAmount + saTransitFee;
-
-        saActual.setIssuer (issuer); // XXX Make sure this done in + above.
-
-        JLOG (j.debug) << "rippleSend> " <<
-            to_string (uSenderID) <<
-            " - > " << to_string (uReceiverID) <<
-            " : deliver=" << saAmount.getFullText () <<
-            " fee=" << saTransitFee.getFullText () <<
-            " cost=" << saActual.getFullText ();
-
-        terResult   = rippleCredit (view, issuer, uReceiverID, saAmount, true, j);
-
-        if (tesSUCCESS == terResult)
-            terResult   = rippleCredit (view, uSenderID, issuer, saActual, true, j);
+        auto const rate = rippleTransferRate (view, issuer);
+        if (QUALITY_ONE == rate)
+            saActual = saAmount;
+        else
+            saActual =
+                multiply (saAmount, amountFromRate (rate), saAmount.issue ());
     }
+
+    JLOG (j.debug()) << "rippleSend> " <<
+        to_string (uSenderID) <<
+        " - > " << to_string (uReceiverID) <<
+        " : deliver=" << saAmount.getFullText () <<
+        " cost=" << saActual.getFullText ();
+
+    TER terResult   = rippleCredit (view, issuer, uReceiverID, saAmount, true, j);
+
+    if (tesSUCCESS == terResult)
+        terResult = rippleCredit (view, uSenderID, issuer, saActual, true, j);
 
     return terResult;
 }
@@ -1408,7 +1425,7 @@ accountSend (ApplyView& view,
     {
         STAmount saActual;
 
-        JLOG (j.trace) << "accountSend: " <<
+        JLOG (j.trace()) << "accountSend: " <<
             to_string (uSenderID) << " -> " << to_string (uReceiverID) <<
             " : " << saAmount.getFullText ();
 
@@ -1433,7 +1450,7 @@ accountSend (ApplyView& view,
         ? view.peek (keylet::account(uReceiverID))
         : SLE::pointer ();
 
-    if (j.trace)
+    if (auto stream = j.trace())
     {
         std::string sender_bal ("-");
         std::string receiver_bal ("-");
@@ -1444,7 +1461,7 @@ accountSend (ApplyView& view,
         if (receiver)
             receiver_bal = receiver->getFieldAmount (sfBalance).getFullText ();
 
-       j.trace << "accountSend> " <<
+       stream << "accountSend> " <<
             to_string (uSenderID) << " (" << sender_bal <<
             ") -> " << to_string (uReceiverID) << " (" << receiver_bal <<
             ") : " << saAmount.getFullText ();
@@ -1477,7 +1494,7 @@ accountSend (ApplyView& view,
         view.update (receiver);
     }
 
-    if (j.trace)
+    if (auto stream = j.trace())
     {
         std::string sender_bal ("-");
         std::string receiver_bal ("-");
@@ -1488,7 +1505,7 @@ accountSend (ApplyView& view,
         if (receiver)
             receiver_bal = receiver->getFieldAmount (sfBalance).getFullText ();
 
-        j.trace << "accountSend< " <<
+        stream << "accountSend< " <<
             to_string (uSenderID) << " (" << sender_bal <<
             ") -> " << to_string (uReceiverID) << " (" << receiver_bal <<
             ") : " << saAmount.getFullText ();
@@ -1563,7 +1580,7 @@ issueIOU (ApplyView& view,
     // Can't send to self!
     assert (issue.account != account);
 
-    JLOG (j.trace) << "issueIOU: " <<
+    JLOG (j.trace()) << "issueIOU: " <<
         to_string (account) << ": " <<
         amount.getFullText ();
 
@@ -1637,7 +1654,7 @@ redeemIOU (ApplyView& view,
     // Can't send to self!
     assert (issue.account != account);
 
-    JLOG (j.trace) << "redeemIOU: " <<
+    JLOG (j.trace()) << "redeemIOU: " <<
         to_string (account) << ": " <<
         amount.getFullText ();
 
@@ -1651,7 +1668,7 @@ redeemIOU (ApplyView& view,
         // In order to hold an IOU, a trust line *MUST* exist to track the
         // balance. If it doesn't, then something is very wrong. Don't try
         // to continue.
-        JLOG (j.fatal) << "redeemIOU: " <<
+        JLOG (j.fatal()) << "redeemIOU: " <<
             to_string (account) << " attempts to redeem " <<
             amount.getFullText () << " but no trust line exists!";
 
@@ -1707,7 +1724,7 @@ transferXRP (ApplyView& view,
     SLE::pointer sender = view.peek (keylet::account(from));
     SLE::pointer receiver = view.peek (keylet::account(to));
 
-    JLOG (j.trace) << "transferXRP: " <<
+    JLOG (j.trace()) << "transferXRP: " <<
         to_string (from) <<  " -> " << to_string (to) <<
         ") : " << amount.getFullText ();
 

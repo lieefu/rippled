@@ -72,7 +72,7 @@ void PathRequests::updateAll (std::shared_ptr <ReadView const> const& inLedger,
     bool newRequests = app_.getLedgerMaster().isNewPathRequest();
     bool mustBreak = false;
 
-    JLOG (mJournal.trace) <<
+    JLOG (mJournal.trace()) <<
         "updateAll seq=" << cache->getLedger()->seq() <<
         ", " << requests.size() << " requests";
 
@@ -96,8 +96,6 @@ void PathRequests::updateAll (std::shared_ptr <ReadView const> const& inLedger,
                 {
                     if (auto ipSub = request->getSubscriber ())
                     {
-                        ipSub->getConsumer ().charge (
-                            Resource::feePathFindUpdate);
                         if (!ipSub->getConsumer ().warn ())
                         {
                             Json::Value update = request->doUpdate (cache, false);
@@ -176,7 +174,7 @@ void PathRequests::updateAll (std::shared_ptr <ReadView const> const& inLedger,
     }
     while (!shouldCancel ());
 
-    JLOG (mJournal.debug) <<
+    JLOG (mJournal.debug()) <<
         "updateAll complete: " << processed << " processed and " <<
         removed << " removed";
 }
@@ -228,13 +226,15 @@ Json::Value
 PathRequests::makeLegacyPathRequest(
     PathRequest::pointer& req,
     std::function <void (void)> completion,
+    Resource::Consumer& consumer,
     std::shared_ptr<ReadView const> const& inLedger,
     Json::Value const& request)
 {
     // This assignment must take place before the
     // completion function is called
     req = std::make_shared<PathRequest> (
-        app_, completion, ++mLastIdentifier, *this, mJournal);
+        app_, completion, consumer, ++mLastIdentifier,
+            *this, mJournal);
 
     auto result = req->doCreate (
         getLineCache (inLedger, false), request);

@@ -266,8 +266,9 @@ public:
 
         auto& app = env.app();
         Resource::Charge loadType = Resource::feeReferenceRPC;
-        RPC::Context context {beast::Journal(), {}, app, loadType, app.getOPs(),
-            app.getLedgerMaster(), Role::USER, {}};
+        Resource::Consumer c;
+        RPC::Context context {beast::Journal(), {}, app, loadType,
+            app.getOPs(), app.getLedgerMaster(), c, Role::USER, {}};
         Json::Value result;
         gate g;
         // Test RPC::Tuning::max_src_cur source currencies.
@@ -393,6 +394,19 @@ public:
             "alice", "bob", Account("bob")["USD"](5));
         expect(same(st, stpath("gateway")));
         expect(equal(sa, Account("alice")["USD"](5)));
+    }
+
+    void
+    xrp_to_xrp()
+    {
+        using namespace jtx;
+        testcase("XRP to XRP");
+        Env env(*this);
+        env.fund(XRP(10000), "alice", "bob");
+
+        auto const result = find_paths(env,
+                                       "alice", "bob", XRP(5));
+        expect(std::get<0>(result).empty());
     }
 
     void
@@ -845,6 +859,7 @@ public:
         quality_paths_quality_set_and_test();
         trust_auto_clear_trust_normal_clear();
         trust_auto_clear_trust_auto_clear();
+        xrp_to_xrp();
     }
 };
 

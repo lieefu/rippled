@@ -106,7 +106,6 @@ private:
     Application& app_;
     Port const& m_port;
     Resource::Manager& m_resourceManager;
-    Resource::Consumer m_usage;
     beast::IP::Endpoint const m_remoteAddress;
     std::string const m_forwardedFor;
     std::string const m_user;
@@ -160,7 +159,7 @@ ConnectionImpl <WebSocket>::ConnectionImpl (
 
     if (! m_forwardedFor.empty() || ! m_user.empty())
     {
-        j_.debug << "connect secure_gateway X-Forwarded-For: " <<
+        JLOG(j_.debug()) << "connect secure_gateway X-Forwarded-For: " <<
             m_forwardedFor << ", X-User: " << m_user;
     }
 }
@@ -175,7 +174,7 @@ template <class WebSocket>
 void ConnectionImpl <WebSocket>::rcvMessage (
     message_ptr const& msg, bool& msgRejected, bool& runQueue)
 {
-    JLOG(j_.debug) <<
+    JLOG(j_.debug()) <<
         "WebSocket: received " << msg->get_payload();
 
     ScopedLockType sl (m_receiveQueueMutex);
@@ -287,8 +286,9 @@ Json::Value ConnectionImpl <WebSocket>::invokeCommand (
     else
     {
         RPC::Context context {app_.journal ("RPCHandler"), jvRequest,
-            app_, loadType, m_netOPs, app_.getLedgerMaster(), role,
-                jobCoro, this->shared_from_this (), {m_user, m_forwardedFor}};
+            app_, loadType, m_netOPs, app_.getLedgerMaster(), getConsumer(),
+                role, jobCoro, this->shared_from_this(),
+                    {m_user, m_forwardedFor}};
         RPC::doCommand (context, jvResult[jss::result]);
     }
 
@@ -337,7 +337,7 @@ void ConnectionImpl <WebSocket>::preDestroy ()
 {
     if (! m_forwardedFor.empty() || ! m_user.empty())
     {
-        j_.debug << "disconnect secure_gateway X-Forwarded-For: " <<
+        JLOG(j_.debug()) << "disconnect secure_gateway X-Forwarded-For: " <<
             m_forwardedFor << ", X-User: " << m_user;
     }
 
@@ -355,7 +355,7 @@ void ConnectionImpl <WebSocket>::preDestroy ()
 template <class WebSocket>
 void ConnectionImpl <WebSocket>::send (Json::Value const& jvObj, bool broadcast)
 {
-    JLOG (j_.debug) <<
+    JLOG (j_.debug()) <<
         "WebSocket: sending " << to_string (jvObj);
     connection_ptr ptr = m_connection.lock ();
     if (ptr)
@@ -365,7 +365,7 @@ void ConnectionImpl <WebSocket>::send (Json::Value const& jvObj, bool broadcast)
 template <class WebSocket>
 void ConnectionImpl <WebSocket>::disconnect ()
 {
-    JLOG (j_.debug) <<
+    JLOG (j_.debug()) <<
         "WebSocket: disconnecting";
     connection_ptr ptr = m_connection.lock ();
 

@@ -95,8 +95,9 @@ void startServer (Application& app)
                 std::cerr << "Startup RPC: " << jvCommand << std::endl;
 
             Resource::Charge loadType = Resource::feeReferenceRPC;
+            Resource::Consumer c;
             RPC::Context context {app.journal ("RPCHandler"), jvCommand, app,
-                loadType, app.getOPs (), app.getLedgerMaster(), Role::ADMIN};
+                loadType, app.getOPs (), app.getLedgerMaster(), c, Role::ADMIN};
 
             Json::Value jvResult;
             RPC::doCommand (context, jvResult);
@@ -420,12 +421,13 @@ int run (int argc, char** argv)
     }
 
     // Construct the logs object at the configured severity
-    beast::Journal::Severity thresh = beast::Journal::kInfo;
+    using namespace beast::severities;
+    Severity thresh = kInfo;
 
     if (vm.count ("quiet"))
-        thresh = beast::Journal::kFatal;
+        thresh = kFatal;
     else if (vm.count ("verbose"))
-        thresh = beast::Journal::kTrace;
+        thresh = kTrace;
 
     auto logs = std::make_unique<Logs>(thresh);
 
