@@ -136,7 +136,8 @@ class WSClientImpl : public WSClient
                 *pp.ip = address_v4{0x7f000001};
             return { *pp.ip, *pp.port };
         }
-        throw std::runtime_error("Missing WebSocket port");
+        Throw<std::runtime_error>("Missing WebSocket port");
+        return {}; // Silence compiler control paths return value warning
     }
 
     template <class ConstBuffers>
@@ -181,7 +182,8 @@ public:
         error_code ec;
         ws_.connect(ec);
         if(ec)
-            throw ec;
+            Throw<boost::system::system_error>(ec);
+
         read_frame_op{*this};
     }
 
@@ -210,7 +212,7 @@ public:
             Json::Value jp;
             if(params)
                jp = params;
-            jp["command"] = cmd;
+            jp[jss::command] = cmd;
             auto const s = to_string(jp);
             ws_.write(buffer(s));
         }
@@ -221,7 +223,26 @@ public:
                 return jv[jss::type] == jss::response;
             });
         if (jv)
+        {
+            // Normalize JSON output
+            jv->removeMember(jss::type);
+            if ((*jv).isMember(jss::status) &&
+                (*jv)[jss::status] == jss::error)
+            {
+                Json::Value ret;
+                ret[jss::result] = *jv;
+                if ((*jv).isMember(jss::error))
+                    ret[jss::error] = (*jv)[jss::error];
+                ret[jss::status] = jss::error;
+                return ret;
+            }
+
+            if ((*jv).isMember(jss::status) &&
+                (*jv).isMember(jss::result))
+                    (*jv)[jss::result][jss::status] =
+                        (*jv)[jss::status];
             return *jv;
+        }
         return {};
     }
 
