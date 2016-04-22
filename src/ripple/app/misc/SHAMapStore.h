@@ -25,7 +25,7 @@
 #include <ripple/nodestore/Manager.h>
 #include <ripple/nodestore/Scheduler.h>
 #include <ripple/protocol/ErrorCodes.h>
-#include <beast/threads/Stoppable.h>
+#include <ripple/core/Stoppable.h>
 
 namespace ripple {
 
@@ -36,7 +36,7 @@ class TransactionMaster;
  * related sqlite databse
  */
 class SHAMapStore
-    : public beast::Stoppable
+    : public Stoppable
 {
 public:
     struct Setup
@@ -75,6 +75,9 @@ public:
 
     /** Highest ledger that may be deleted. */
     virtual LedgerIndex getCanDelete() = 0;
+
+    /** The number of files that are needed. */
+    virtual int fdlimit() const = 0;
 };
 
 //------------------------------------------------------------------------------
@@ -86,7 +89,7 @@ std::unique_ptr<SHAMapStore>
 make_SHAMapStore(
     Application& app,
     SHAMapStore::Setup const& s,
-    beast::Stoppable& parent,
+    Stoppable& parent,
     NodeStore::Scheduler& scheduler,
     beast::Journal journal,
     beast::Journal nodeStoreJournal,

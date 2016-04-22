@@ -31,7 +31,7 @@
 #include <ripple/protocol/STTx.h>
 #include <ripple/protocol/TER.h>
 #include <ripple/core/Config.h>
-#include <beast/utility/Journal.h>
+#include <ripple/beast/utility/Journal.h>
 #include <boost/optional.hpp>
 #include <functional>
 #include <map>
@@ -328,6 +328,7 @@ transferXRP (ApplyView& view,
             STAmount const& amount,
                 beast::Journal j);
 
+NetClock::time_point const& flowV2SoTime ();
 bool flowV2Switchover (NetClock::time_point const closeTime);
 
 } // ripple

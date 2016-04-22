@@ -36,11 +36,11 @@
 #include <ripple/rpc/RPCHandler.h>
 #include <ripple/server/Role.h>
 #include <ripple/protocol/BuildInfo.h>
-#include <beast/chrono/basic_seconds_clock.h>
-#include <beast/module/core/time/Time.h>
-#include <beast/unit_test.h>
-#include <beast/utility/Debug.h>
-#include <beast/streams/debug_ostream.h>
+#include <ripple/beast/clock/basic_seconds_clock.h>
+#include <ripple/beast/core/Time.h>
+#include <ripple/beast/unit_test.h>
+#include <ripple/beast/utility/Debug.h>
+#include <beast/detail/stream/debug_ostream.hpp>
 #include <google/protobuf/stubs/common.h>
 #include <boost/program_options.hpp>
 #include <cstdlib>
@@ -54,23 +54,6 @@ namespace po = boost::program_options;
 
 namespace ripple {
 
-void setupServer (Application& app)
-{
-#ifdef RLIMIT_NOFILE
-    struct rlimit rl;
-    if (getrlimit(RLIMIT_NOFILE, &rl) == 0)
-    {
-         if (rl.rlim_cur != rl.rlim_max)
-         {
-             rl.rlim_cur = rl.rlim_max;
-             setrlimit(RLIMIT_NOFILE, &rl);
-         }
-    }
-#endif
-
-    app.setup ();
-}
-
 boost::filesystem::path
 getEntropyFile(Config const& config)
 {
@@ -78,6 +61,47 @@ getEntropyFile(Config const& config)
     if (path.empty ())
         return {};
     return boost::filesystem::path (path) / "random.seed";
+}
+
+bool
+adjustDescriptorLimit(int needed)
+{
+#ifdef RLIMIT_NOFILE
+    // Get the current limit, then adjust it to what we need.
+    struct rlimit rl;
+
+    int available = 0;
+
+    if (getrlimit(RLIMIT_NOFILE, &rl) == 0)
+    {
+        // If the limit is infnite, then we are good.
+        if (rl.rlim_cur == RLIM_INFINITY)
+            available = needed;
+        else
+            available = rl.rlim_cur;
+
+        if (available < needed)
+        {
+            // Ignore the rlim_max, as the process may
+            // be configured to override it anyways. We
+            // ask for the number descriptors we need.
+            rl.rlim_cur = needed;
+
+            if (setrlimit(RLIMIT_NOFILE, &rl) == 0)
+                available = rl.rlim_cur;
+        }
+    }
+
+    if (needed > available)
+    {
+        std::cerr << "Insufficient number of file descriptors:\n";
+        std::cerr << "     Needed: " << needed << '\n';
+        std::cerr << "  Available: " << available << '\n';
+        return false;
+    }
+#endif
+
+    return true;
 }
 
 void startServer (Application& app)
@@ -170,7 +194,7 @@ static int runUnitTests(
     std::string const& argument)
 {
     using namespace beast::unit_test;
-    beast::debug_ostream stream;
+    beast::detail::debug_ostream stream;
     reporter r (stream);
     r.arg(argument);
     bool const failed (r.run_each_if (
@@ -265,20 +289,6 @@ int run (int argc, char** argv)
         std::cout << "rippled version " <<
             BuildInfo::getVersionString () << std::endl;
         return 0;
-    }
-
-    // Use a watchdog process unless we're invoking a stand alone type of mode
-    //
-    if (HaveSustain ()
-        && !vm.count ("parameters")
-        && !vm.count ("fg")
-        && !vm.count ("standalone")
-        && !vm.count ("unittest"))
-    {
-        std::string logMe = DoSustain ();
-
-        if (!logMe.empty ())
-            std::cerr << logMe << std::endl;
     }
 
     // Run the unit tests if requested.
@@ -434,6 +444,19 @@ int run (int argc, char** argv)
     // No arguments. Run server.
     if (!vm.count ("parameters"))
     {
+        // We want at least 1024 file descriptors. We'll
+        // tweak this further.
+        if (!adjustDescriptorLimit(1024))
+            return -1;
+
+        if (HaveSustain() && !vm.count ("fg") && !config->RUN_STANDALONE)
+        {
+            auto const ret = DoSustain ();
+
+            if (!ret.empty ())
+                std::cerr << "Watchdog: " << ret << std::endl;
+        }
+
         if (vm.count ("debug"))
             setDebugJournalSink (logs->get("Debug"));
 
@@ -444,7 +467,16 @@ int run (int argc, char** argv)
             std::move(config),
             std::move(logs),
             std::move(timeKeeper));
-        setupServer (*app);
+        app->setup ();
+
+        // With our configuration parsed, ensure we have
+        // enough file descriptors available:
+        if (!adjustDescriptorLimit(app->fdlimit()))
+        {
+            StopSustain();
+            return -1;
+        }
+
         startServer (*app);
         return 0;
     }
@@ -456,8 +488,6 @@ int run (int argc, char** argv)
         vm["parameters"].as<std::vector<std::string>>(),
         *logs);
 }
-
-extern int run (int argc, char** argv);
 
 } // ripple
 

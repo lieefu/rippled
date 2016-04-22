@@ -21,8 +21,8 @@
 #define RIPPLE_SERVER_PORT_H_INCLUDED
 
 #include <ripple/basics/BasicConfig.h>
-#include <beast/net/IPEndpoint.h>
-#include <beast/utility/ci_char_traits.h>
+#include <ripple/beast/net/IPEndpoint.h>
+#include <beast/detail/ci_char_traits.hpp>
 #include <boost/asio/ip/address.hpp>
 #include <cstdint>
 #include <memory>
@@ -39,7 +39,7 @@ struct Port
     std::string name;
     boost::asio::ip::address ip;
     std::uint16_t port = 0;
-    std::set<std::string, beast::ci_less> protocol;
+    std::set<std::string, beast::detail::ci_less> protocol;
     std::vector<beast::IP::Address> admin_ip;
     std::vector<beast::IP::Address> secure_gateway_ip;
     std::string user;
@@ -50,6 +50,10 @@ struct Port
     std::string ssl_cert;
     std::string ssl_chain;
     std::shared_ptr<boost::asio::ssl::context> context;
+
+    // How many incoming connections are allowed on this
+    // port in the range [0, 65535] where 0 means unlimited.
+    int limit = 0;
 
     // Returns `true` if any websocket protocols are specified
     bool websockets() const;
@@ -69,7 +73,7 @@ operator<< (std::ostream& os, Port const& p);
 struct ParsedPort
 {
     std::string name;
-    std::set<std::string, beast::ci_less> protocol;
+    std::set<std::string, beast::detail::ci_less> protocol;
     std::string user;
     std::string password;
     std::string admin_user;
@@ -77,6 +81,7 @@ struct ParsedPort
     std::string ssl_key;
     std::string ssl_cert;
     std::string ssl_chain;
+    int limit = 0;
 
     boost::optional<boost::asio::ip::address> ip;
     boost::optional<std::uint16_t> port;

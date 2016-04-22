@@ -19,13 +19,13 @@
 
 #include <BeastConfig.h>
 #include <ripple/basics/make_SSLContext.h>
-#include <beast/asio/placeholders.h>
-#include <beast/unit_test/suite.h>
+#include <beast/placeholders.hpp>
+#include <ripple/beast/unit_test.h>
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
 #include <boost/optional.hpp>
 #include <boost/utility/in_place_factory.hpp>
-#include <beast/threads/Thread.h>
+#include <ripple/beast/core/Thread.h>
 #include <cassert>
 #include <condition_variable>
 #include <functional>

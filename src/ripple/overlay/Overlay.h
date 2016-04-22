@@ -24,10 +24,10 @@
 #include <ripple/overlay/Peer.h>
 #include <ripple/overlay/PeerSet.h>
 #include <ripple/server/Handoff.h>
-#include <beast/asio/ssl_bundle.h>
-#include <beast/http/message.h>
-#include <beast/threads/Stoppable.h>
-#include <beast/utility/PropertyStream.h>
+#include <ripple/beast/asio/ssl_bundle.h>
+#include <beast/http/message.hpp>
+#include <ripple/core/Stoppable.h>
+#include <ripple/beast/utility/PropertyStream.h>
 #include <memory>
 #include <type_traits>
 #include <boost/asio/buffer.hpp>
@@ -43,7 +43,7 @@ class BasicConfig;
 
 /** Manages the set of connected peers. */
 class Overlay
-    : public beast::Stoppable
+    : public Stoppable
     , public beast::PropertyStream::Source
 {
 protected:
@@ -81,7 +81,7 @@ public:
     virtual
     Handoff
     onHandoff (std::unique_ptr <beast::asio::ssl_bundle>&& bundle,
-        beast::http::message&& request,
+        http_request_type&& request,
             boost::asio::ip::tcp::endpoint remote_address) = 0;
 
     /** Establish a peer connection to the specified endpoint.
@@ -91,6 +91,11 @@ public:
     virtual
     void
     connect (beast::IP::Endpoint const& address) = 0;
+
+    /** Returns the maximum number of peers we are configured to allow. */
+    virtual
+    int
+    limit () = 0;
 
     /** Returns the number of active peers.
         Active peers are only those peers that have completed the

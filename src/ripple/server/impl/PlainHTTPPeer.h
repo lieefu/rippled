@@ -21,6 +21,7 @@
 #define RIPPLE_SERVER_PLAINHTTPPEER_H_INCLUDED
 
 #include <ripple/server/impl/BaseHTTPPeer.h>
+#include <ripple/server/impl/PlainWSPeer.h>
 #include <memory>
 
 namespace ripple {
@@ -44,12 +45,15 @@ public:
     void
     run();
 
+    std::shared_ptr<WSSession>
+    websocketUpgrade() override;
+
 private:
     void
-    do_request();
+    do_request() override;
 
     void
-    do_close();
+    do_close() override;
 };
 
 //------------------------------------------------------------------------------
@@ -71,14 +75,32 @@ PlainHTTPPeer::PlainHTTPPeer (Port const& port, Handler& handler,
 }
 
 void
-PlainHTTPPeer::run ()
+PlainHTTPPeer::run()
 {
-    handler_.onAccept (session());
+    if (!handler_.onAccept (session(), remote_address_))
+    {
+        boost::asio::spawn (strand_,
+            std::bind (&PlainHTTPPeer::do_close,
+                shared_from_this()));
+        return;
+    }
+
     if (! stream_.is_open())
         return;
 
     boost::asio::spawn (strand_, std::bind (&PlainHTTPPeer::do_read,
         shared_from_this(), std::placeholders::_1));
+}
+
+std::shared_ptr<WSSession>
+PlainHTTPPeer::websocketUpgrade()
+{
+    auto ws = ios().emplace<PlainWSPeer>(
+        port_, handler_, remote_address_,
+            std::move(message_), std::move(stream_),
+                journal_);
+    ws->run();
+    return ws;
 }
 
 void
@@ -101,7 +123,7 @@ PlainHTTPPeer::do_request()
     }
 
     // Perform half-close when Connection: close and not SSL
-    if (! message_.keep_alive())
+    if (! is_keep_alive(message_))
         stream_.shutdown (socket_type::shutdown_receive, ec);
     if (ec)
         return fail (ec, "request");

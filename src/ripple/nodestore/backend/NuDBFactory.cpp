@@ -25,10 +25,10 @@
 #include <ripple/nodestore/impl/codec.h>
 #include <ripple/nodestore/impl/DecodedBlob.h>
 #include <ripple/nodestore/impl/EncodedBlob.h>
-#include <beast/nudb.h>
-#include <beast/nudb/detail/varint.h>
-#include <beast/nudb/visit.h>
-#include <beast/hash/xxhasher.h>
+#include <ripple/beast/nudb.h>
+#include <ripple/beast/nudb/detail/varint.h>
+#include <ripple/beast/nudb/visit.h>
+#include <ripple/beast/hash/xxhasher.h>
 #include <boost/filesystem.hpp>
 #include <cassert>
 #include <chrono>
@@ -243,6 +243,13 @@ public:
         api::verify (dp, kp);
         db_.open (dp, kp, lp,
             arena_alloc_size);
+    }
+
+    /** Returns the number of file handles the backend expects to need */
+    int
+    fdlimit() const override
+    {
+        return 3;
     }
 };
 

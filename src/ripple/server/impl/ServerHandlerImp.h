@@ -23,13 +23,52 @@
 #include <ripple/core/Job.h>
 #include <ripple/core/JobCoro.h>
 #include <ripple/json/Output.h>
+#include <ripple/json/to_string.h>
+#include <ripple/net/InfoSub.h>
 #include <ripple/server/Handler.h>
+#include <ripple/server/JsonWriter.h>
 #include <ripple/server/ServerHandler.h>
 #include <ripple/server/Session.h>
+#include <ripple/server/WSSession.h>
 #include <ripple/rpc/RPCHandler.h>
 #include <ripple/app/main/CollectorManager.h>
+#include <map>
+#include <mutex>
 
 namespace ripple {
+
+inline
+bool operator< (Port const& lhs, Port const& rhs)
+{
+    return lhs.name < rhs.name;
+}
+
+class WSInfoSub : public InfoSub
+{
+    std::weak_ptr<WSSession> ws_;
+
+public:
+    WSInfoSub(Source& source, Consumer consumer,
+            std::shared_ptr<WSSession> const& ws)
+        : InfoSub(source, consumer)
+        , ws_(ws)
+    {
+    }
+
+    void
+    send(Json::Value const& jv, bool)
+    {
+        auto sp = ws_.lock();
+        if(! sp)
+            return;
+        beast::streambuf sb;
+        write(sb, jv);
+        auto m = std::make_shared<
+            StreambufWSMsg<decltype(sb)>>(
+                std::move(sb));
+        sp->send(m);
+    }
+};
 
 // Private implementation
 class ServerHandlerImp
@@ -37,6 +76,7 @@ class ServerHandlerImp
     , public Handler
 {
 private:
+
     Application& app_;
     Resource::Manager& m_resourceManager;
     beast::Journal m_journal;
@@ -47,6 +87,8 @@ private:
     beast::insight::Counter rpc_requests_;
     beast::insight::Event rpc_size_;
     beast::insight::Event rpc_time_;
+    std::mutex countlock_;
+    std::map<std::reference_wrapper<Port const>, int> count_;
 
 public:
     ServerHandlerImp (Application& app, Stoppable& parent,
@@ -76,11 +118,8 @@ private:
     onStop() override;
 
     //
-    // HTTP::Handler
+    // Handler
     //
-
-    void
-    onAccept (Session& session) override;
 
     bool
     onAccept (Session& session,
@@ -89,15 +128,19 @@ private:
     Handoff
     onHandoff (Session& session,
         std::unique_ptr <beast::asio::ssl_bundle>&& bundle,
-            beast::http::message&& request,
+            http_request_type&& request,
                 boost::asio::ip::tcp::endpoint remote_address) override;
 
     Handoff
     onHandoff (Session& session, boost::asio::ip::tcp::socket&& socket,
-        beast::http::message&& request,
+        http_request_type&& request,
             boost::asio::ip::tcp::endpoint remote_address) override;
     void
     onRequest (Session& session) override;
+
+    void
+    onWSMessage(std::shared_ptr<WSSession> session,
+        std::vector<boost::asio::const_buffer> const& buffers) override;
 
     void
     onClose (Session& session,
@@ -107,6 +150,12 @@ private:
     onStopped (Server&) override;
 
     //--------------------------------------------------------------------------
+
+    Json::Value
+    processSession(
+        std::shared_ptr<WSSession> const& session,
+            std::shared_ptr<JobCoro> const& coro,
+                Json::Value const& jv);
 
     void
     processSession (std::shared_ptr<Session> const&,
@@ -120,7 +169,7 @@ private:
 
 private:
     bool
-    isWebsocketUpgrade (beast::http::message const& request);
+    isWebsocketUpgrade (http_request_type const& request);
 
     bool
     authorized (Port const& port,

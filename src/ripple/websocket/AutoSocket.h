@@ -21,9 +21,9 @@
 #define RIPPLE_WEBSOCKET_AUTOSOCKET_AUTOSOCKET_H_INCLUDED
 
 #include <ripple/basics/Log.h>
-#include <beast/asio/IPAddressConversion.h>
-#include <beast/asio/bind_handler.h>
-#include <beast/asio/placeholders.h>
+#include <ripple/beast/net/IPAddressConversion.h>
+#include <beast/bind_handler.hpp>
+#include <beast/placeholders.hpp>
 #include <boost/asio.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/ssl.hpp>
@@ -38,7 +38,7 @@ class AutoSocket
 public:
     using ssl_socket   = boost::asio::ssl::stream<boost::asio::ip::tcp::socket>;
     using endpoint_type     = boost::asio::ip::tcp::socket::endpoint_type;
-    using socket_ptr        = std::shared_ptr<ssl_socket>;
+    using socket_ptr        = std::unique_ptr<ssl_socket>;
     using plain_socket      = ssl_socket::next_layer_type;
     using lowest_layer_type = ssl_socket::lowest_layer_type;
     using handshake_type    = ssl_socket::handshake_type;
@@ -55,7 +55,7 @@ public:
         , mBuffer ((plainOnly || secureOnly) ? 0 : 4)
         , j_ (ripple::debugJournal())
     {
-        mSocket = std::make_shared<ssl_socket> (s, c);
+        mSocket = std::make_unique<ssl_socket> (s, c);
     }
 
     AutoSocket (
@@ -175,7 +175,7 @@ public:
             // must be plain
             mSecure = false;
             mSocket->get_io_service ().post (
-                beast::asio::bind_handler (cbFunc, error_code()));
+                beast::bind_handler (cbFunc, error_code()));
         }
         else
         {
@@ -208,7 +208,7 @@ public:
                 ec = e.code();
             }
             mSocket->get_io_service ().post (
-                beast::asio::bind_handler (handler, ec));
+                beast::bind_handler (handler, ec));
         }
     }
 

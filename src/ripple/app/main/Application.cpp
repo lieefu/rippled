@@ -54,6 +54,7 @@
 #include <ripple/json/json_reader.h>
 #include <ripple/json/to_string.h>
 #include <ripple/core/ConfigSections.h>
+#include <ripple/core/DeadlineTimer.h>
 #include <ripple/core/LoadFeeTrack.h>
 #include <ripple/core/TimeKeeper.h>
 #include <ripple/ledger/CachedSLEs.h>
@@ -71,9 +72,8 @@
 #include <ripple/unity/git_id.h>
 #include <ripple/websocket/MakeServer.h>
 #include <ripple/crypto/csprng.h>
-#include <beast/asio/io_latency_probe.h>
-#include <beast/module/core/text/LexicalCast.h>
-#include <beast/module/core/thread/DeadlineTimer.h>
+#include <ripple/beast/asio/io_latency_probe.h>
+#include <ripple/beast/core/LexicalCast.h>
 #include <boost/asio/signal_set.hpp>
 #include <boost/optional.hpp>
 #include <fstream>
@@ -237,8 +237,8 @@ supportedAmendments ();
 // VFALCO TODO Move the function definitions into the class declaration
 class ApplicationImp
     : public Application
-    , public beast::RootStoppable
-    , public beast::DeadlineTimer::Listener
+    , public RootStoppable
+    , public DeadlineTimer::Listener
     , public BasicApp
 {
 private:
@@ -354,14 +354,14 @@ public:
     std::unique_ptr <Validations> mValidations;
     std::unique_ptr <LoadManager> m_loadManager;
     std::unique_ptr <TxQ> txQ_;
-    beast::DeadlineTimer m_sweepTimer;
-    beast::DeadlineTimer m_entropyTimer;
+    DeadlineTimer m_sweepTimer;
+    DeadlineTimer m_entropyTimer;
 
     std::unique_ptr <DatabaseCon> mTxnDB;
     std::unique_ptr <DatabaseCon> mLedgerDB;
     std::unique_ptr <DatabaseCon> mWalletDB;
     std::unique_ptr <Overlay> m_overlay;
-    std::vector <std::unique_ptr<beast::Stoppable>> websocketServers_;
+    std::vector <std::unique_ptr<Stoppable>> websocketServers_;
 
     boost::asio::signal_set m_signals;
     beast::WaitableEvent m_stop;
@@ -534,6 +534,7 @@ public:
     void signalStop() override;
     bool checkSigs() const override;
     void checkSigs(bool) override;
+    int fdlimit () const override;
 
     //--------------------------------------------------------------------------
 
@@ -868,7 +869,7 @@ public:
         std::exit(code);
     }
 
-    void onDeadlineTimer (beast::DeadlineTimer& timer) override
+    void onDeadlineTimer (DeadlineTimer& timer) override
     {
         if (timer == m_entropyTimer)
         {
@@ -1156,14 +1157,12 @@ ApplicationImp::doStart()
 void
 ApplicationImp::run()
 {
+    if (!config_->RUN_STANDALONE)
     {
-        if (!config_->RUN_STANDALONE)
-        {
-            // VFALCO NOTE This seems unnecessary. If we properly refactor the load
-            //             manager then the deadlock detector can just always be "armed"
-            //
-            getLoadManager ().activateDeadlockDetector ();
-        }
+        // VFALCO NOTE This seems unnecessary. If we properly refactor the load
+        //             manager then the deadlock detector can just always be "armed"
+        //
+        getLoadManager ().activateDeadlockDetector ();
     }
 
     m_stop.wait ();
@@ -1199,6 +1198,27 @@ bool ApplicationImp::checkSigs() const
 void ApplicationImp::checkSigs(bool check)
 {
     checkSigs_ = check;
+}
+
+int ApplicationImp::fdlimit() const
+{
+    // Standard handles, config file, misc I/O etc:
+    int needed = 128;
+
+    // 1.5 times the configured peer limit for peer connections:
+    needed += static_cast<int>(0.5 + (1.5 * m_overlay->limit()));
+
+    // the number of fds needed by the backend (internally
+    // doubled if online delete is enabled).
+    needed += std::max(5, m_shaMapStore->fdlimit());
+
+    // One fd per incoming connection a port can accept, or
+    // if no limit is set, assume it'll handle 256 clients.
+    for(auto const& p : serverHandler_->setup().ports)
+        needed += std::max (256, p.limit);
+
+    // The minimum number of file descriptors we need is 1024:
+    return std::max(1024, needed);
 }
 
 //------------------------------------------------------------------------------

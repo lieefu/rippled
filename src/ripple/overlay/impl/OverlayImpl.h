@@ -25,6 +25,7 @@
 #include <ripple/overlay/Overlay.h>
 #include <ripple/overlay/impl/Manifest.h>
 #include <ripple/overlay/impl/TrafficCount.h>
+#include <ripple/beast/deprecated_http.h>
 #include <ripple/server/Handoff.h>
 #include <ripple/server/ServerHandler.h>
 #include <ripple/basics/Resolver.h>
@@ -166,7 +167,7 @@ public:
 
     Handoff
     onHandoff (std::unique_ptr <beast::asio::ssl_bundle>&& bundle,
-        beast::http::message&& request,
+        http_request_type&& request,
             endpoint_type remote_endpoint) override;
 
     PeerSequence
@@ -254,7 +255,11 @@ public:
 
     static
     bool
-    isPeerUpgrade (beast::http::message const& request);
+    isPeerUpgrade (http_request_type const& request);
+
+    static
+    bool
+    isPeerUpgrade (beast::deprecated_http::message const& request);
 
     static
     std::string
@@ -269,7 +274,11 @@ public:
 private:
     std::shared_ptr<Writer>
     makeRedirectResponse (PeerFinder::Slot::ptr const& slot,
-        beast::http::message const& request, address_type remote_address);
+        http_request_type const& request, address_type remote_address);
+
+    bool
+    processRequest (http_request_type const& req,
+        Handoff& handoff);
 
     void
     connect (beast::IP::Endpoint const& remote_endpoint) override;
@@ -278,19 +287,17 @@ private:
         Active peers are only those peers that have completed the handshake
         and are running the Ripple protocol.
     */
-    // VFALCO Why private?
     std::size_t
     size() override;
+
+    int
+    limit () override;
 
     Json::Value
     crawl() override;
 
     Json::Value
     json() override;
-
-    bool
-    processRequest (beast::http::message const& req,
-        Handoff& handoff);
 
     //--------------------------------------------------------------------------
 

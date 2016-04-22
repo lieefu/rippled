@@ -24,7 +24,7 @@
 #include <ripple/shamap/TreeNodeCache.h>
 #include <ripple/basics/TaggedCache.h>
 #include <ripple/core/Config.h>
-#include <beast/utility/PropertyStream.h>
+#include <ripple/beast/utility/PropertyStream.h>
 #include <memory>
 #include <mutex>
 
@@ -151,13 +151,11 @@ public:
     virtual bool serverOkay (std::string& reason) = 0;
 
     virtual beast::Journal journal (std::string const& name) = 0;
-    /** Retrieve the "wallet database"
 
-        It looks like this is used to store the unique node list.
-    */
-    // VFALCO TODO Rename, document this
-    //        NOTE This will be replaced by class Validators
-    //
+    /* Returns the number of file descriptors the application wants */
+    virtual int fdlimit () const = 0;
+
+    /** Retrieve the "wallet database" */
     virtual DatabaseCon& getWalletDB () = 0;
 };
 
