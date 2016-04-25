@@ -26,7 +26,7 @@ else()
 endif( CMAKE_BUILD_TYPE STREQUAL "Debug" )
 message("Build Type:" ${CMAKE_BUILD_TYPE} ${CMAKE_CXX_FLAGS})
 
-INCLUDE_DIRECTORIES(./src ./src/beast ./src/soci/include ./src/rocksdb2/include
+INCLUDE_DIRECTORIES(./src ./src/beast ./src/beast/include ./src/soci/include ./src/rocksdb2/include
     ./src/sqlite ./src/ed25519-donna ./src/snappy/snappy ./src/snappy/config
     ./src/websocketpp ./src/rocksdb2 ./src/secp256k1
     ./src/soci/src ./src/soci/include/private
@@ -64,17 +64,24 @@ aux_source_directory(./src/ripple/peerfinder/impl SRC_LIST)
 aux_source_directory(./src/ripple/unl/tests SRC_LIST)
 
 set(UNITY_COMMON
+    ./src/sqlite/sqlite_unity.c
     ./src/ripple/unity/soci.cpp
     ./src/ripple/unity/nodestore.cpp
     ./src/ripple/unity/git_id.cpp
-    ./src/beast/beast/unity/hash_unity.cpp
+    ./src/beast/src/beast_http_nodejs_parser.cpp
+    ./src/ripple/beast/unity/beast_clock_unity.cpp
+    ./src/ripple/beast/unity/beast_container_unity.cpp
+    ./src/ripple/beast/unity/beast_insight_unity.cpp
+    ./src/ripple/beast/unity/beast_net_unity.cpp
+    ./src/ripple/beast/unity/beast_nudb_unity.cpp
+    ./src/ripple/beast/unity/beast_utility_unity.cpp
+    ./src/ripple/beast/unity/beast_hash_unity.cpp
     ./src/ripple/unity/beast.cpp
     ./src/ripple/unity/lz4.c
     ./src/ripple/unity/protobuf.cpp
     ./src/ripple/unity/ripple.proto.cpp
     ./src/ripple/unity/resource.cpp
     ./src/ripple/unity/websocket02.cpp
-    ./src/ripple/unity/beastc.c
     ./src/ripple/unity/rocksdb.cpp
     ./src/ripple/unity/snappy.cpp
     ./src/ripple/unity/secp256k1.cpp
@@ -84,6 +91,12 @@ add_executable(${PROJECT_NAME} ${SRC_LIST} ${UNITY_COMMON})
 #add_library(${PROJECT_NAME}_object OBJECT ${SRC_LIST})
 
 set(UNITY_LIST
+    ./src/ripple/beast/unity/beast_clock_unity.cpp
+    ./src/ripple/beast/unity/beast_container_unity.cpp
+    ./src/ripple/beast/unity/beast_insight_unity.cpp
+    ./src/ripple/beast/unity/beast_net_unity.cpp
+    ./src/ripple/beast/unity/beast_nudb_unity.cpp
+    ./src/ripple/beast/unity/beast_utility_unity.cpp
     ./src/ripple/unity/soci_ripple.cpp
     ./src/ripple/unity/app_ledger.cpp
     ./src/ripple/unity/app_main.cpp
@@ -104,7 +117,6 @@ set(UNITY_LIST
     ./src/ripple/unity/shamap.cpp
     ./src/ripple/unity/server.cpp
     ./src/ripple/unity/test.cpp
-    ./src/ripple/unity/unl.cpp
     )
 
 #add_executable(${PROJECT_NAME} ${UNITY_LIST} ${UNITY_COMMON})
