@@ -68,12 +68,12 @@ set(UNITY_COMMON
     ./src/ripple/unity/soci.cpp
     ./src/ripple/unity/nodestore.cpp
     ./src/ripple/unity/git_id.cpp
-    ./src/beast/src/beast_http_nodejs_parser.cpp
     ./src/ripple/beast/unity/beast_clock_unity.cpp
     ./src/ripple/beast/unity/beast_container_unity.cpp
     ./src/ripple/beast/unity/beast_insight_unity.cpp
     ./src/ripple/beast/unity/beast_net_unity.cpp
     ./src/ripple/beast/unity/beast_nudb_unity.cpp
+    ./src/beast/test/http/nodejs_parser.cpp
     ./src/ripple/beast/unity/beast_utility_unity.cpp
     ./src/ripple/beast/unity/beast_hash_unity.cpp
     ./src/ripple/unity/beast.cpp
