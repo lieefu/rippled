@@ -42,6 +42,8 @@
 
 namespace ripple {
 
+using namespace std::chrono_literals;
+
 class Rules;
 
 //------------------------------------------------------------------------------
@@ -122,7 +124,7 @@ public:
     std::string                 START_LEDGER;
 
     // Network parameters
-    int                         TRANSACTION_FEE_BASE = 10;   // The number of fee units a reference transaction costs
+    int const                   TRANSACTION_FEE_BASE = 10;   // The number of fee units a reference transaction costs
 
     /** Operate in stand-alone mode.
 
@@ -144,7 +146,7 @@ public:
     bool                        PEER_PRIVATE = false;           // True to ask peers not to relay current IP.
     int                         PEERS_MAX = 0;
 
-    int                         WEBSOCKET_PING_FREQ = 5 * 60;
+    std::chrono::seconds        WEBSOCKET_PING_FREQ = 5min;
 
     // RPC parameters
     Json::Value                     RPC_STARTUP;
