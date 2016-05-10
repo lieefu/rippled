@@ -1,7 +1,11 @@
 project(rippled)
 cmake_minimum_required(VERSION 3.3)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
-SET(CMAKE_FIND_LIBRARY_SUFFIXES .a .so)
+if(UNIX)
+    SET(CMAKE_FIND_LIBRARY_SUFFIXES .a .so)
+else()
+    SET(CMAKE_FIND_LIBRARY_SUFFIXES .lib .dll)
+endif()
 #SET( CMAKE_VERBOSE_MAKEFILE on )
 include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG("-std=c++11" COMPILER_SUPPORTS_CXX11)
@@ -23,7 +27,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug" )
 else()
     set(CMAKE_BUILD_TYPE "Release")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${STD_CXX} -pthread -fno-strict-aliasing -Wno-unused-but-set-variable -Wno-deprecated")
-endif( CMAKE_BUILD_TYPE STREQUAL "Debug" )
+endif(CMAKE_BUILD_TYPE STREQUAL "Debug" )
 message("Build Type:" ${CMAKE_BUILD_TYPE} ${CMAKE_CXX_FLAGS})
 
 INCLUDE_DIRECTORIES(./src ./src/beast ./src/beast/include ./src/soci/include ./src/rocksdb2/include
@@ -73,7 +77,6 @@ set(UNITY_COMMON
     ./src/ripple/beast/unity/beast_insight_unity.cpp
     ./src/ripple/beast/unity/beast_net_unity.cpp
     ./src/ripple/beast/unity/beast_nudb_unity.cpp
-    ./src/beast/test/http/nodejs_parser.cpp
     ./src/ripple/beast/unity/beast_utility_unity.cpp
     ./src/ripple/beast/unity/beast_hash_unity.cpp
     ./src/ripple/unity/beast.cpp
