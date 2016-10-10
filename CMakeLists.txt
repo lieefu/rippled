@@ -30,13 +30,15 @@ else()
 endif(CMAKE_BUILD_TYPE STREQUAL "Debug" )
 message("Build Type:" ${CMAKE_BUILD_TYPE} ${CMAKE_CXX_FLAGS})
 
-INCLUDE_DIRECTORIES(./src ./src/beast ./src/beast/include ./src/soci/include ./src/rocksdb2/include
+INCLUDE_DIRECTORIES(./src ./src/beast ./src/beast/include ./src/beast/extras ./src/soci/include ./src/rocksdb2/include
     ./src/sqlite ./src/ed25519-donna ./src/snappy/snappy ./src/snappy/config
     ./src/websocketpp ./src/rocksdb2 ./src/secp256k1
     ./src/soci/src ./src/soci/include/private
     )
 
 #execute protoc proto/ripple.proto --cpp_out= ,generate ripple.pb.cc and ripple.pb.h
+#sudo apt install protobuf-compiler
+#sudo apt install libprotobuf-dev
 execute_process(COMMAND protoc proto/ripple.proto --cpp_out=${CMAKE_CURRENT_BINARY_DIR}/
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/ripple/
     )
@@ -125,7 +127,7 @@ set(UNITY_LIST
 #add_executable(${PROJECT_NAME} ${UNITY_LIST} ${UNITY_COMMON})
 
 #find boost lib
-set(BOOST_ROOT "/opt/boost_1_60_0")
+set(BOOST_ROOT "/opt/boost_1_61_0")
 find_package(Boost REQUIRED COMPONENTS coroutine context filesystem system date_time regex program_options thread)
 
 if(NOT Boost_FOUND)
@@ -134,6 +136,7 @@ endif()
 
 include_directories(${Boost_INCLUDE_DIRS})
 #find openssl lib
+#sudo apt install libssl-dev
 find_package(OpenSSL REQUIRED)
 if(NOT OPENSSL_FOUND)
   message(FATAL_ERROR "Not find OpenSSL library")
@@ -151,3 +154,5 @@ if(UNIX)
 endif()
 
 target_link_libraries(${PROJECT_NAME}  ${LINK_FLAGS}  ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES} ${PROTOBUF_LIBRARIES})
+
+#if cannot find -lgmp sudo apt install libgmp-dev
