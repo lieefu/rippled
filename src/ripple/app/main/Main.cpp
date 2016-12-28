@@ -481,7 +481,7 @@ int run (int argc, char** argv)
 
 // Must be outside the namespace for obvious reasons
 //
-int main (int argc, char** argv)
+int main1 (int argc, char** argv)
 {
     // Workaround for Boost.Context / Boost.Coroutine
     // https://svn.boost.org/trac/boost/ticket/10657
