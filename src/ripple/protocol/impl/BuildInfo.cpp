@@ -19,7 +19,6 @@
 
 #include <BeastConfig.h>
 #include <ripple/basics/contract.h>
-#include <ripple/beast/unit_test.h>
 #include <ripple/beast/core/SemanticVersion.h>
 #include <ripple/protocol/BuildInfo.h>
 
@@ -34,7 +33,7 @@ char const* const versionString =
     //  The build version number. You must edit this for each release
     //  and follow the format described at http://semver.org/
     //
-        "0.50.0-b1"
+        "0.50.0-b2"
 
 #if defined(DEBUG) || defined(SANITIZER)
        "+"

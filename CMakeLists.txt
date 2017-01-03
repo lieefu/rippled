@@ -195,11 +195,10 @@ json.cpp
 protocol.cpp
 rpcx.cpp
 shamap.cpp
-server.cpp
-test.cpp)
+server.cpp)
 
 prepend(test_unity_srcs
-src/unity/
+src/test/unity/
 app_test_unity.cpp
 basics_test_unity.cpp
 beast_test_unity.cpp
@@ -214,11 +213,11 @@ resource_test_unity.cpp
 rpc_test_unity.cpp
 server_test_unity.cpp
 shamap_test_unity.cpp
-test_unity.cpp)
+support_unity.cpp)
 
 list(APPEND rippled_src_unity ${beast_unity_srcs} ${ripple_unity_srcs} ${test_unity_srcs})
 
-add_with_props(rippled_src_unity src/unity/nodestore_test_unity.cpp
+add_with_props(rippled_src_unity src/test/unity/nodestore_test_unity.cpp
 -I"${CMAKE_CURRENT_SOURCE_DIR}/"src/rocksdb2/include
 -I"${CMAKE_CURRENT_SOURCE_DIR}/"src/snappy/snappy
 -I"${CMAKE_CURRENT_SOURCE_DIR}/"src/snappy/config
@@ -235,7 +234,7 @@ add_with_props(rippled_src_unity src/ripple/unity/soci_ripple.cpp ${soci_extra_i
 list(APPEND ripple_unity_srcs ${beast_unity_srcs} ${test_unity_srcs}
 src/ripple/unity/nodestore.cpp
 src/ripple/unity/soci_ripple.cpp
-src/unity/nodestore_test_unity.cpp)
+src/test/unity/nodestore_test_unity.cpp)
 
 ############################################################
 
@@ -266,8 +265,7 @@ foreach(curdir
         protocol
         rpc
         server
-        shamap
-        test)
+        shamap)
     file(GLOB_RECURSE cursrcs src/ripple/${curdir}/*.cpp)
     list(APPEND rippled_src_nonunity "${cursrcs}")
     list(APPEND non_unity_srcs "${cursrcs}")
@@ -284,7 +282,28 @@ add_with_props(rippled_src_nonunity "${nodestore_srcs}"
 
 list(APPEND non_unity_srcs "${nodestore_srcs}")
 
-file(GLOB_RECURSE test_srcs src/test/*.cpp)
+# unit test sources
+foreach(curdir
+        app
+        basics
+        beast
+        conditions
+        core
+        json
+        ledger
+        nodestore
+        overlay
+        peerfinder
+        protocol
+        resource
+        rpc
+        server
+        shamap
+        support)
+    file(GLOB_RECURSE cursrcs src/test/${curdir}/*.cpp)
+    list(APPEND test_srcs "${cursrcs}")
+endforeach()
+
 add_with_props(rippled_src_nonunity "${test_srcs}"
     -I"${CMAKE_CURRENT_SOURCE_DIR}/"src/rocksdb2/include
     -I"${CMAKE_CURRENT_SOURCE_DIR}/"src/snappy/snappy
@@ -441,15 +460,45 @@ set_property(TARGET ${other_target} PROPERTY EXCLUDE_FROM_DEFAULT_BUILD true)
 find_program(
   B2_EXE
   NAMES b2
-  PATHS ENV BOOST_ROOT
+  HINTS ${BOOST_ROOT}
+  PATHS ${BOOST_ROOT}
   DOC "Location of the b2 build executable from Boost")
-if(${B2_EXE} STREQUAL "b2-NOTFOUND")
+if(${B2_EXE} STREQUAL "B2_EXE-NOTFOUND")
   message(WARNING
     "Boost b2 executable not found. docs target will not be buildable")
+elseif(NOT BOOST_ROOT)
+    if(Boost_INCLUDE_DIRS)
+        set(BOOST_ROOT ${Boost_INCLUDE_DIRS})
+    else()
+        get_filename_component(BOOST_ROOT ${B2_EXE} DIRECTORY)
+    endif()
 endif()
+# The value for BOOST_ROOT will be determined based on
+#   1) The environment BOOST_ROOT
+#   2) The Boost_INCLUDE_DIRS found by `get_boost`
+#   3) The folder the `b2` executable is found in.
+# If those checks don't yield the correct path, BOOST_ROOT
+# can be defined on the cmake command line:
+#    cmake <path> -DBOOST_ROOT=<boost_path>
+if(BOOST_ROOT)
+    set(B2_PARAMS "-sBOOST_ROOT=${BOOST_ROOT}")
+endif()
+
+# Find bash to help Windows avoid file association problems
+find_program(
+    BASH_EXE
+    NAMES bash sh
+    DOC "Location of the bash shell executable"
+    )
+if(${BASH_EXE} STREQUAL "BASH_EXE-NOTFOUND")
+    message(WARNING
+        "Unable to find bash executable. docs target may not be buildable")
+    set(BASH_EXE "")
+endif()
+
 add_custom_target(docs
-  COMMAND "./makeqbk.sh"
-  COMMAND ${B2_EXE}
+  COMMAND ${CMAKE_COMMAND} -E env "PATH=$ENV{PATH} " ${BASH_EXE} ./makeqbk.sh
+  COMMAND ${B2_EXE} ${B2_PARAMS}
   BYPRODUCTS "${CMAKE_CURRENT_SOURCE_DIR}/docs/html/index.html"
   WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/docs"
   SOURCES "${doc_srcs}"
