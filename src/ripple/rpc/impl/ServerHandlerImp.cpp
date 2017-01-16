@@ -41,7 +41,7 @@
 #include <ripple/rpc/RPCHandler.h>
 #include <ripple/server/SimpleWriter.h>
 #include <beast/core/detail/base64.hpp>
-#include <beast/http/headers.hpp>
+#include <beast/http/fields.hpp>
 #include <beast/http/string_body.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/type_traits.hpp>
@@ -61,7 +61,7 @@ isWebsocketUpgrade(
 {
     if (is_upgrade(request))
         return beast::detail::ci_equal(
-            request.headers["Upgrade"], "websocket");
+            request.fields["Upgrade"], "websocket");
     return false;
 }
 
@@ -81,19 +81,19 @@ unauthorizedResponse(
 {
     using namespace beast::http;
     Handoff handoff;
-    response_v1<string_body> msg;
+    response<string_body> msg;
     msg.version = request.version;
     msg.status = 401;
     msg.reason = "Unauthorized";
-    msg.headers.insert("Server", BuildInfo::getFullVersionString());
-    msg.headers.insert("Content-Type", "text/html");
+    msg.fields.insert("Server", BuildInfo::getFullVersionString());
+    msg.fields.insert("Content-Type", "text/html");
     msg.body = "Invalid protocol.";
     prepare(msg, beast::http::connection::close);
     handoff.response = std::make_shared<SimpleWriter>(msg);
     return handoff;
 }
 
-// VFALCO TODO Rewrite to use beast::http::headers
+// VFALCO TODO Rewrite to use beast::http::fields
 static
 bool
 authorized (
@@ -269,7 +269,7 @@ Json::Output makeOutput (Session& session)
 // HACK!
 static
 std::map<std::string, std::string>
-build_map(beast::http::headers const& h)
+build_map(beast::http::fields const& h)
 {
     std::map <std::string, std::string> c;
     for (auto const& e : h)
@@ -311,7 +311,7 @@ ServerHandlerImp::onRequest (Session& session)
 
     // Check user/password authorization
     if (! authorized (
-            session.port(), build_map(session.request().headers)))
+            session.port(), build_map(session.request().fields)))
     {
         HTTPReply (403, "Forbidden", makeOutput (session), app_.journal ("RPC"));
         session.close (true);
@@ -402,6 +402,8 @@ ServerHandlerImp::processSession(
     if (is->getConsumer().disconnect())
     {
         session->close();
+        // FIX: This rpcError is not delivered since the session
+        // was just closed.
         return rpcError(rpcSLOW_DOWN);
     }
 
@@ -438,6 +440,7 @@ ServerHandlerImp::processSession(
         is->user());
     if (Role::FORBID == role)
     {
+        loadType = Resource::feeInvalidRPC;
         jr[jss::result] = rpcError (rpcFORBIDDEN);
     }
     else
@@ -507,18 +510,18 @@ ServerHandlerImp::processSession (std::shared_ptr<Session> const& session,
         [&]
         {
             auto const iter =
-                session->request().headers.find(
+                session->request().fields.find(
                     "X-Forwarded-For");
-            if(iter != session->request().headers.end())
+            if(iter != session->request().fields.end())
                 return iter->second;
             return std::string{};
         }(),
         [&]
         {
             auto const iter =
-                session->request().headers.find(
+                session->request().fields.find(
                     "X-User");
-            if(iter != session->request().headers.end())
+            if(iter != session->request().fields.end())
                 return iter->second;
             return std::string{};
         }());
@@ -550,26 +553,12 @@ ServerHandlerImp::processRequest (Port const& port,
         }
     }
 
-    // Parse id now so errors from here on will have the id
-    //
-    // VFALCO NOTE Except that "id" isn't included in the following errors.
-    //
-    Json::Value const& id = jsonRPC [jss::id];
+    /* ---------------------------------------------------------------------- */
+    // Determine role/usage so we can charge for invalid requests
     Json::Value const& method = jsonRPC [jss::method];
 
-    if (! method) {
-        HTTPReply (400, "Null method", output, rpcJ);
-        return;
-    }
-
-    if (!method.isString ()) {
-        HTTPReply (400, "method is not string", output, rpcJ);
-        return;
-    }
-
-    /* ---------------------------------------------------------------------- */
     auto role = Role::FORBID;
-    auto required = RPC::roleRequired(id.asString());
+    auto required = RPC::roleRequired(method.asString());
     if (jsonRPC.isMember(jss::params) &&
         jsonRPC[jss::params].isArray() &&
         jsonRPC[jss::params].size() > 0 &&
@@ -582,16 +571,6 @@ ServerHandlerImp::processRequest (Port const& port,
     {
         role = requestRole(required, port, Json::objectValue,
             remoteIPAddress, user);
-    }
-
-    /**
-     * Clear header-assigned values if not positively identified from a
-     * secure_gateway.
-     */
-    if (role != Role::IDENTIFIED)
-    {
-        forwardedFor.clear();
-        user.clear();
     }
 
     Resource::Consumer usage;
@@ -610,9 +589,31 @@ ServerHandlerImp::processRequest (Port const& port,
         }
     }
 
+    if (role == Role::FORBID)
+    {
+        usage.charge(Resource::feeInvalidRPC);
+        HTTPReply (403, "Forbidden", output, rpcJ);
+        return;
+    }
+
+    if (! method)
+    {
+        usage.charge(Resource::feeInvalidRPC);
+        HTTPReply (400, "Null method", output, rpcJ);
+        return;
+    }
+
+    if (! method.isString ())
+    {
+        usage.charge(Resource::feeInvalidRPC);
+        HTTPReply (400, "method is not string", output, rpcJ);
+        return;
+    }
+
     std::string strMethod = method.asString ();
     if (strMethod.empty())
     {
+        usage.charge(Resource::feeInvalidRPC);
         HTTPReply (400, "method is empty", output, rpcJ);
         return;
     }
@@ -630,6 +631,7 @@ ServerHandlerImp::processRequest (Port const& port,
 
     else if (!params.isArray () || params.size() != 1)
     {
+        usage.charge(Resource::feeInvalidRPC);
         HTTPReply (400, "params unparseable", output, rpcJ);
         return;
     }
@@ -638,20 +640,20 @@ ServerHandlerImp::processRequest (Port const& port,
         params = std::move (params[0u]);
         if (!params.isObject())
         {
+            usage.charge(Resource::feeInvalidRPC);
             HTTPReply (400, "params unparseable", output, rpcJ);
             return;
         }
     }
 
-    // VFALCO TODO Shouldn't we handle this earlier?
-    //
-    if (role == Role::FORBID)
+    /**
+     * Clear header-assigned values if not positively identified from a
+     * secure_gateway.
+     */
+    if (role != Role::IDENTIFIED)
     {
-        // VFALCO TODO Needs implementing
-        // FIXME Needs implementing
-        // XXX This needs rate limiting to prevent brute forcing password.
-        HTTPReply (403, "Forbidden", output, rpcJ);
-        return;
+        forwardedFor.clear();
+        user.clear();
     }
 
     JLOG(m_journal.debug()) << "Query: " << strMethod << params;
@@ -684,6 +686,10 @@ ServerHandlerImp::processRequest (Port const& port,
         result[jss::status]  = jss::success;
     }
 
+    usage.charge (loadType);
+    if (usage.warn())
+        result[jss::warning] = jss::load;
+
     Json::Value reply (Json::objectValue);
     reply[jss::result] = std::move (result);
     if (jsonRPC.isMember(jss::jsonrpc))
@@ -702,7 +708,6 @@ ServerHandlerImp::processRequest (Port const& port,
         response.size ()));
 
     response += '\n';
-    usage.charge (loadType);
 
     if (auto stream = m_journal.debug())
     {
@@ -728,7 +733,7 @@ ServerHandlerImp::statusResponse(
 {
     using namespace beast::http;
     Handoff handoff;
-    response_v1<string_body> msg;
+    response<string_body> msg;
     std::string reason;
     if (app_.serverOkay(reason))
     {
@@ -747,8 +752,8 @@ ServerHandlerImp::statusResponse(
             reason + "</BODY></HTML>";
     }
     msg.version = request.version;
-    msg.headers.insert("Server", BuildInfo::getFullVersionString());
-    msg.headers.insert("Content-Type", "text/html");
+    msg.fields.insert("Server", BuildInfo::getFullVersionString());
+    msg.fields.insert("Content-Type", "text/html");
     prepare(msg, beast::http::connection::close);
     handoff.response = std::make_shared<SimpleWriter>(msg);
     return handoff;

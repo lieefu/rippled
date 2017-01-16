@@ -24,13 +24,13 @@
 #include <ripple/app/tx/apply.h>
 #include <ripple/basics/Log.h>
 #include <ripple/basics/mulDiv.h>
-#include <test/support/TestSuite.h>
+#include <test/jtx/TestSuite.h>
 #include <ripple/protocol/ErrorCodes.h>
 #include <ripple/protocol/Feature.h>
 #include <ripple/protocol/JsonFields.h>
 #include <ripple/protocol/st.h>
-#include <test/support/jtx.h>
-#include <test/support/jtx/ticket.h>
+#include <test/jtx.h>
+#include <test/jtx/ticket.h>
 #include <boost/optional.hpp>
 
 namespace ripple {
@@ -1641,6 +1641,8 @@ public:
                 !RPC::contains_error(fee[jss::result])))
             {
                 auto const& result = fee[jss::result];
+                BEAST_EXPECT(result.isMember(jss::ledger_current_index)
+                    && result[jss::ledger_current_index] == 3);
                 BEAST_EXPECT(result.isMember(jss::current_ledger_size));
                 BEAST_EXPECT(result.isMember(jss::current_queue_size));
                 BEAST_EXPECT(result.isMember(jss::expected_ledger_size));
@@ -1667,6 +1669,8 @@ public:
                 !RPC::contains_error(fee[jss::result])))
             {
                 auto const& result = fee[jss::result];
+                BEAST_EXPECT(result.isMember(jss::ledger_current_index)
+                    && result[jss::ledger_current_index] == 4);
                 BEAST_EXPECT(result.isMember(jss::current_ledger_size));
                 BEAST_EXPECT(result.isMember(jss::current_queue_size));
                 BEAST_EXPECT(result.isMember(jss::expected_ledger_size));
