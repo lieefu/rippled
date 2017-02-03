@@ -43,6 +43,15 @@
     <Filter Include="beast\websocket\impl">
       <UniqueIdentifier>{A7FC9CC0-AB8D-4252-CCB2-B67F7BE99CF5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="beast\zlib">
+      <UniqueIdentifier>{9455431B-BD48-F8C8-B53B-D9BCAF355341}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="beast\zlib\detail">
+      <UniqueIdentifier>{508136FB-F124-7376-5A6F-F28EDEB18389}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="beast\zlib\impl">
+      <UniqueIdentifier>{F85F4A52-7A2A-700C-4804-97FFC11E99FD}</UniqueIdentifier>
+    </Filter>
     <Filter Include="ed25519-donna">
       <UniqueIdentifier>{9DEED977-2072-A182-5BD9-CEBF206E8C91}</UniqueIdentifier>
     </Filter>
@@ -369,6 +378,15 @@
     </Filter>
     <Filter Include="secp256k1\src">
       <UniqueIdentifier>{E25BE380-48B7-7EA9-DFD6-F38F1E8A22FF}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="secp256k1\src\modules">
+      <UniqueIdentifier>{6BE34C70-DCAB-96D1-487C-ADC692DA720B}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="secp256k1\src\modules\ecdh">
+      <UniqueIdentifier>{46FCBB68-FE6A-0EB7-98C9-C695B05E6503}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="secp256k1\src\modules\recovery">
+      <UniqueIdentifier>{0B56B4A9-D9BC-B7FB-DD09-ADAF9DDE4895}</UniqueIdentifier>
     </Filter>
     <Filter Include="snappy">
       <UniqueIdentifier>{26306562-F81D-B6CD-B192-22BA51E1A96B}</UniqueIdentifier>
@@ -768,6 +786,9 @@
     <ClInclude Include="..\..\src\beast\include\beast\websocket\detail\mask.hpp">
       <Filter>beast\websocket\detail</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\beast\include\beast\websocket\detail\pmd_extension.hpp">
+      <Filter>beast\websocket\detail</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\src\beast\include\beast\websocket\detail\stream_base.hpp">
       <Filter>beast\websocket\detail</Filter>
     </ClInclude>
@@ -821,6 +842,36 @@
     </ClInclude>
     <ClInclude Include="..\..\src\beast\include\beast\websocket\teardown.hpp">
       <Filter>beast\websocket</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\beast\include\beast\zlib\deflate_stream.hpp">
+      <Filter>beast\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\beast\include\beast\zlib\detail\bitstream.hpp">
+      <Filter>beast\zlib\detail</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\beast\include\beast\zlib\detail\deflate_stream.hpp">
+      <Filter>beast\zlib\detail</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\beast\include\beast\zlib\detail\inflate_stream.hpp">
+      <Filter>beast\zlib\detail</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\beast\include\beast\zlib\detail\ranges.hpp">
+      <Filter>beast\zlib\detail</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\beast\include\beast\zlib\detail\window.hpp">
+      <Filter>beast\zlib\detail</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\beast\include\beast\zlib\error.hpp">
+      <Filter>beast\zlib</Filter>
+    </ClInclude>
+    <None Include="..\..\src\beast\include\beast\zlib\impl\error.ipp">
+      <Filter>beast\zlib\impl</Filter>
+    </None>
+    <ClInclude Include="..\..\src\beast\include\beast\zlib\inflate_stream.hpp">
+      <Filter>beast\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\beast\include\beast\zlib\zlib.hpp">
+      <Filter>beast\zlib</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\ed25519-donna\curve25519-donna-32bit.h">
       <Filter>ed25519-donna</Filter>
@@ -2089,12 +2140,6 @@
       <Filter>ripple\beast\core</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\ripple\beast\core\PlatformConfig.h">
-      <Filter>ripple\beast\core</Filter>
-    </ClInclude>
-    <ClCompile Include="..\..\src\ripple\beast\core\RelativeTime.cpp">
-      <Filter>ripple\beast\core</Filter>
-    </ClCompile>
-    <ClInclude Include="..\..\src\ripple\beast\core\RelativeTime.h">
       <Filter>ripple\beast\core</Filter>
     </ClInclude>
     <ClCompile Include="..\..\src\ripple\beast\core\SemanticVersion.cpp">
@@ -4521,6 +4566,12 @@
     <ClInclude Include="..\..\src\secp256k1\include\secp256k1.h">
       <Filter>secp256k1\include</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\secp256k1\include\secp256k1_ecdh.h">
+      <Filter>secp256k1\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\secp256k1\include\secp256k1_recovery.h">
+      <Filter>secp256k1\include</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\src\secp256k1\src\ecdsa.h">
       <Filter>secp256k1\src</Filter>
     </ClInclude>
@@ -4534,6 +4585,12 @@
       <Filter>secp256k1\src</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\secp256k1\src\ecmult.h">
+      <Filter>secp256k1\src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\secp256k1\src\ecmult_const.h">
+      <Filter>secp256k1\src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\secp256k1\src\ecmult_const_impl.h">
       <Filter>secp256k1\src</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\secp256k1\src\ecmult_gen.h">
@@ -4581,6 +4638,12 @@
     <ClInclude Include="..\..\src\secp256k1\src\hash_impl.h">
       <Filter>secp256k1\src</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\secp256k1\src\modules\ecdh\main_impl.h">
+      <Filter>secp256k1\src\modules\ecdh</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\secp256k1\src\modules\recovery\main_impl.h">
+      <Filter>secp256k1\src\modules\recovery</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\src\secp256k1\src\num.h">
       <Filter>secp256k1\src</Filter>
     </ClInclude>
@@ -4609,6 +4672,12 @@
       <Filter>secp256k1\src</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\secp256k1\src\scalar_impl.h">
+      <Filter>secp256k1\src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\secp256k1\src\scalar_low.h">
+      <Filter>secp256k1\src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\secp256k1\src\scalar_low_impl.h">
       <Filter>secp256k1\src</Filter>
     </ClInclude>
     <ClCompile Include="..\..\src\secp256k1\src\secp256k1.c">
@@ -4999,6 +5068,9 @@
       <Filter>test\basics</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\test\basics\RangeSet_test.cpp">
+      <Filter>test\basics</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\test\basics\Slice_test.cpp">
       <Filter>test\basics</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\test\basics\StringUtilities_test.cpp">

@@ -428,6 +428,8 @@
     </ClInclude>
     <ClInclude Include="..\..\src\beast\include\beast\websocket\detail\mask.hpp">
     </ClInclude>
+    <ClInclude Include="..\..\src\beast\include\beast\websocket\detail\pmd_extension.hpp">
+    </ClInclude>
     <ClInclude Include="..\..\src\beast\include\beast\websocket\detail\stream_base.hpp">
     </ClInclude>
     <ClInclude Include="..\..\src\beast\include\beast\websocket\detail\utf8_checker.hpp">
@@ -463,6 +465,26 @@
     <ClInclude Include="..\..\src\beast\include\beast\websocket\stream.hpp">
     </ClInclude>
     <ClInclude Include="..\..\src\beast\include\beast\websocket\teardown.hpp">
+    </ClInclude>
+    <ClInclude Include="..\..\src\beast\include\beast\zlib\deflate_stream.hpp">
+    </ClInclude>
+    <ClInclude Include="..\..\src\beast\include\beast\zlib\detail\bitstream.hpp">
+    </ClInclude>
+    <ClInclude Include="..\..\src\beast\include\beast\zlib\detail\deflate_stream.hpp">
+    </ClInclude>
+    <ClInclude Include="..\..\src\beast\include\beast\zlib\detail\inflate_stream.hpp">
+    </ClInclude>
+    <ClInclude Include="..\..\src\beast\include\beast\zlib\detail\ranges.hpp">
+    </ClInclude>
+    <ClInclude Include="..\..\src\beast\include\beast\zlib\detail\window.hpp">
+    </ClInclude>
+    <ClInclude Include="..\..\src\beast\include\beast\zlib\error.hpp">
+    </ClInclude>
+    <None Include="..\..\src\beast\include\beast\zlib\impl\error.ipp">
+    </None>
+    <ClInclude Include="..\..\src\beast\include\beast\zlib\inflate_stream.hpp">
+    </ClInclude>
+    <ClInclude Include="..\..\src\beast\include\beast\zlib\zlib.hpp">
     </ClInclude>
     <ClInclude Include="..\..\src\ed25519-donna\curve25519-donna-32bit.h">
     </ClInclude>
@@ -1557,11 +1579,6 @@
     <ClInclude Include="..\..\src\ripple\beast\core\osx_ObjCHelpers.h">
     </ClInclude>
     <ClInclude Include="..\..\src\ripple\beast\core\PlatformConfig.h">
-    </ClInclude>
-    <ClCompile Include="..\..\src\ripple\beast\core\RelativeTime.cpp">
-      <ExcludedFromBuild>True</ExcludedFromBuild>
-    </ClCompile>
-    <ClInclude Include="..\..\src\ripple\beast\core\RelativeTime.h">
     </ClInclude>
     <ClCompile Include="..\..\src\ripple\beast\core\SemanticVersion.cpp">
       <ExcludedFromBuild>True</ExcludedFromBuild>
@@ -3854,6 +3871,10 @@
     </ClInclude>
     <ClInclude Include="..\..\src\secp256k1\include\secp256k1.h">
     </ClInclude>
+    <ClInclude Include="..\..\src\secp256k1\include\secp256k1_ecdh.h">
+    </ClInclude>
+    <ClInclude Include="..\..\src\secp256k1\include\secp256k1_recovery.h">
+    </ClInclude>
     <ClInclude Include="..\..\src\secp256k1\src\ecdsa.h">
     </ClInclude>
     <ClInclude Include="..\..\src\secp256k1\src\ecdsa_impl.h">
@@ -3863,6 +3884,10 @@
     <ClInclude Include="..\..\src\secp256k1\src\eckey_impl.h">
     </ClInclude>
     <ClInclude Include="..\..\src\secp256k1\src\ecmult.h">
+    </ClInclude>
+    <ClInclude Include="..\..\src\secp256k1\src\ecmult_const.h">
+    </ClInclude>
+    <ClInclude Include="..\..\src\secp256k1\src\ecmult_const_impl.h">
     </ClInclude>
     <ClInclude Include="..\..\src\secp256k1\src\ecmult_gen.h">
     </ClInclude>
@@ -3894,6 +3919,10 @@
     </ClInclude>
     <ClInclude Include="..\..\src\secp256k1\src\hash_impl.h">
     </ClInclude>
+    <ClInclude Include="..\..\src\secp256k1\src\modules\ecdh\main_impl.h">
+    </ClInclude>
+    <ClInclude Include="..\..\src\secp256k1\src\modules\recovery\main_impl.h">
+    </ClInclude>
     <ClInclude Include="..\..\src\secp256k1\src\num.h">
     </ClInclude>
     <ClInclude Include="..\..\src\secp256k1\src\num_gmp.h">
@@ -3913,6 +3942,10 @@
     <ClInclude Include="..\..\src\secp256k1\src\scalar_8x32_impl.h">
     </ClInclude>
     <ClInclude Include="..\..\src\secp256k1\src\scalar_impl.h">
+    </ClInclude>
+    <ClInclude Include="..\..\src\secp256k1\src\scalar_low.h">
+    </ClInclude>
+    <ClInclude Include="..\..\src\secp256k1\src\scalar_low_impl.h">
     </ClInclude>
     <ClCompile Include="..\..\src\secp256k1\src\secp256k1.c">
       <ExcludedFromBuild>True</ExcludedFromBuild>
@@ -4277,6 +4310,10 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|x64'">True</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\..\src\test\basics\RangeSet_test.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|x64'">True</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|x64'">True</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\src\test\basics\Slice_test.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|x64'">True</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|x64'">True</ExcludedFromBuild>
     </ClCompile>
