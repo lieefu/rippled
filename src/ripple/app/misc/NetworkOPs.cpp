@@ -180,6 +180,30 @@ class NetworkOPsImp final
         Json::Value json() const;
     };
 
+    //! Server fees published on `server` subscription
+    struct ServerFeeSummary
+    {
+        ServerFeeSummary() = default;
+
+        ServerFeeSummary(std::uint64_t fee,
+                         boost::optional<TxQ::Metrics>&& escalationMetrics,
+                         LoadFeeTrack const & loadFeeTrack);
+        bool
+        operator !=(ServerFeeSummary const & b) const;
+
+        bool
+        operator ==(ServerFeeSummary const & b) const
+        {
+            return !(*this != b);
+        }
+
+        std::uint32_t loadFactorServer = 256;
+        std::uint32_t loadBaseServer = 256;
+        std::uint64_t baseFee = 10;
+        boost::optional<TxQ::Metrics> em = boost::none;
+    };
+
+
 public:
     // VFALCO TODO Make LedgerMaster a SharedPtr or a reference.
     //
@@ -202,8 +226,6 @@ public:
         , mLedgerConsensus (mConsensus->makeLedgerConsensus (
             app, app.getInboundTransactions(), ledgerMaster, *m_localTX))
         , m_ledgerMaster (ledgerMaster)
-        , mLastLoadBase (256)
-        , mLastLoadFactor (256)
         , m_job_queue (job_queue)
         , m_standalone (standalone)
         , m_network_quorum (start_valid ? 0 : network_quorum)
@@ -353,6 +375,15 @@ public:
     void setLastCloseTime (NetClock::time_point t) override
     {
         mConsensus->setLastCloseTime(t);
+    }
+    PublicKey const& getValidationPublicKey () const override
+    {
+        return mLedgerConsensus->getValidationPublicKey ();
+    }
+    void setValidationKeys (
+        SecretKey const& valSecret, PublicKey const& valPublic) override
+    {
+        mLedgerConsensus->setValidationKeys (valSecret, valPublic);
     }
     Json::Value getConsensusInfo () override;
     Json::Value getServerInfo (bool human, bool admin) override;
@@ -548,8 +579,8 @@ private:
     SubMapType mSubValidations;       // Received validations.
     SubMapType mSubPeerStatus;        // peer status changes
 
-    std::uint32_t mLastLoadBase;
-    std::uint32_t mLastLoadFactor;
+    ServerFeeSummary mLastFeeSummary;
+
 
     JobQueue& m_job_queue;
 
@@ -943,6 +974,7 @@ void NetworkOPsImp::apply (std::unique_lock<std::mutex>& batchLock)
 
     {
         auto lock = make_lock(app_.getMasterMutex());
+        bool changed = false;
         {
             std::lock_guard <std::recursive_mutex> lock (
                 m_ledgerMaster.peekMutex());
@@ -950,7 +982,6 @@ void NetworkOPsImp::apply (std::unique_lock<std::mutex>& batchLock)
             app_.openLedger().modify(
                 [&](OpenView& view, beast::Journal j)
             {
-                bool changed = false;
                 for (TransactionStatus& e : transactions)
                 {
                     // we check before addingto the batch
@@ -968,6 +999,8 @@ void NetworkOPsImp::apply (std::unique_lock<std::mutex>& batchLock)
                 return changed;
             });
         }
+        if (changed)
+            reportFeeChange();
 
         auto newOL = app_.openLedger().current();
         for (TransactionStatus& e : transactions)
@@ -1202,8 +1235,8 @@ public:
             if (nodesUsing > v.nodesUsing)
                 return true;
 
-            if (nodesUsing < v.nodesUsing) return
-                false;
+            if (nodesUsing < v.nodesUsing)
+                return false;
 
             return highNodeUsing > v.highNodeUsing;
         }
@@ -1485,6 +1518,9 @@ bool NetworkOPsImp::beginConsensus (uint256 const& networkClosed)
     assert (closingInfo.parentHash ==
             m_ledgerMaster.getClosedLedger()->info().hash);
 
+    app_.validators().onConsensusStart (
+        app_.getValidations().getCurrentPublicKeys ());
+
     mConsensus->startRound (
         *mLedgerConsensus,
         networkClosed,
@@ -1589,6 +1625,38 @@ void NetworkOPsImp::pubManifest (Manifest const& mo)
     }
 }
 
+NetworkOPsImp::ServerFeeSummary::ServerFeeSummary(
+        std::uint64_t fee,
+        boost::optional<TxQ::Metrics>&& escalationMetrics,
+        LoadFeeTrack const & loadFeeTrack)
+    : loadFactorServer{loadFeeTrack.getLoadFactor()}
+    , loadBaseServer{loadFeeTrack.getLoadBase()}
+    , baseFee{fee}
+    , em{std::move(escalationMetrics)}
+{
+
+}
+
+
+bool
+NetworkOPsImp::ServerFeeSummary::operator !=(NetworkOPsImp::ServerFeeSummary const & b) const
+{
+    if(loadFactorServer != b.loadFactorServer ||
+       loadBaseServer != b.loadBaseServer ||
+       baseFee != b.baseFee ||
+       em.is_initialized() != b.em.is_initialized())
+            return true;
+
+    if(em)
+    {
+        return (em->minFeeLevel != b.em->minFeeLevel ||
+                em->expFeeLevel != b.em->expFeeLevel ||
+                em->referenceFeeLevel != b.em->referenceFeeLevel);
+    }
+
+    return false;
+}
+
 void NetworkOPsImp::pubServer ()
 {
     // VFALCO TODO Don't hold the lock across calls to send...make a copy of the
@@ -1600,14 +1668,45 @@ void NetworkOPsImp::pubServer ()
     if (!mSubServer.empty ())
     {
         Json::Value jvObj (Json::objectValue);
-        auto const& feeTrack = app_.getFeeTrack();
 
-        jvObj [jss::type]          = "serverStatus";
+        ServerFeeSummary f{app_.openLedger().current()->fees().base,
+            app_.getTxQ().getMetrics(*app_.openLedger().current()),
+            app_.getFeeTrack()};
+
+        // Need to cap to uint64 to uint32 due to JSON limitations
+        auto clamp = [](std::uint64_t v)
+        {
+            constexpr std::uint64_t max32 =
+                std::numeric_limits<std::uint32_t>::max();
+
+            return static_cast<std::uint32_t>(std::min(max32, v));
+        };
+
+
+        jvObj [jss::type] = "serverStatus";
         jvObj [jss::server_status] = strOperatingMode ();
-        jvObj [jss::load_base]     =
-                (mLastLoadBase = feeTrack.getLoadBase ());
-        jvObj [jss::load_factor]   =
-                (mLastLoadFactor = feeTrack.getLoadFactor ());
+        jvObj [jss::load_base] = f.loadBaseServer;
+        jvObj [jss::load_factor_server] = f.loadFactorServer;
+        jvObj [jss::base_fee] = clamp(f.baseFee);
+
+        if(f.em)
+        {
+            auto const loadFactor =
+                std::max(static_cast<std::uint64_t>(f.loadFactorServer),
+                    mulDiv(f.em->expFeeLevel, f.loadBaseServer,
+                        f.em->referenceFeeLevel).second);
+
+            jvObj [jss::load_factor]   = clamp(loadFactor);
+            jvObj [jss::load_factor_fee_escalation] = clamp(f.em->expFeeLevel);
+            jvObj [jss::load_factor_fee_queue] = clamp(f.em->minFeeLevel);
+            jvObj [jss::load_factor_fee_reference]
+                = clamp(f.em->referenceFeeLevel);
+
+        }
+        else
+            jvObj [jss::load_factor] = f.loadFactorServer;
+
+        mLastFeeSummary = f;
 
         for (auto i = mSubServer.begin (); i != mSubServer.end (); )
         {
@@ -2032,42 +2131,19 @@ Json::Value NetworkOPsImp::getServerInfo (bool human, bool admin)
     if (mNeedNetworkLedger)
         info[jss::network_ledger] = "waiting";
 
-    info[jss::validation_quorum] = m_ledgerMaster.getMinValidations ();
+    info[jss::validation_quorum] = static_cast<Json::UInt>(
+        app_.validators ().quorum ());
 
     info[jss::io_latency_ms] = static_cast<Json::UInt> (
         app_.getIOLatency().count());
 
     if (admin)
     {
-        if (app_.config().VALIDATION_PUB.size ())
+        if (getValidationPublicKey().size ())
         {
-            auto const& validation_manifest =
-                app_.config().section (SECTION_VALIDATION_MANIFEST);
-
-            if (! validation_manifest.lines().empty())
-            {
-                std::string s;
-                s.reserve (Manifest::textLength);
-                for (auto const& line : validation_manifest.lines())
-                    s += beast::rfc2616::trim(line);
-                if (auto mo = make_Manifest (beast::detail::base64_decode(s)))
-                {
-                    Json::Value valManifest = Json::objectValue;
-                    valManifest [jss::master_key] = toBase58 (
-                        TokenType::TOKEN_NODE_PUBLIC,
-                        mo->masterKey);
-                    valManifest [jss::signing_key] = toBase58 (
-                        TokenType::TOKEN_NODE_PUBLIC,
-                        mo->signingKey);
-                    valManifest [jss::seq] = Json::UInt (mo->sequence);
-
-                    info[jss::validation_manifest] = valManifest;
-                }
-            }
-
             info[jss::pubkey_validator] = toBase58 (
                 TokenType::TOKEN_NODE_PUBLIC,
-                app_.config().VALIDATION_PUB);
+                app_.validators().localPublicKey());
         }
         else
         {
@@ -2119,6 +2195,7 @@ Json::Value NetworkOPsImp::getServerInfo (bool human, bool admin)
 
     constexpr std::uint64_t max32 =
         std::numeric_limits<std::uint32_t>::max();
+
     auto const loadFactorServer = app_.getFeeTrack().getLoadFactor();
     auto const loadBaseServer = app_.getFeeTrack().getLoadBase();
     auto const loadFactorFeeEscalation = escalationMetrics ?
@@ -2378,14 +2455,17 @@ void NetworkOPsImp::pubLedger (
 
 void NetworkOPsImp::reportFeeChange ()
 {
-    auto const& feeTrack = app_.getFeeTrack();
-    if ((feeTrack.getLoadBase () == mLastLoadBase) &&
-            (feeTrack.getLoadFactor () == mLastLoadFactor))
-        return;
+    ServerFeeSummary f{app_.openLedger().current()->fees().base,
+        app_.getTxQ().getMetrics(*app_.openLedger().current()),
+        app_.getFeeTrack()};
 
-    m_job_queue.addJob (
-        jtCLIENT, "reportFeeChange->pubServer",
-        [this] (Job&) { pubServer(); });
+
+    // only schedule the job if something has changed
+    if (f != mLastFeeSummary)
+    {
+         m_job_queue.addJob ( jtCLIENT, "reportFeeChange->pubServer",
+                [this] (Job&) { pubServer(); });
+    }
 }
 
 // This routine should only be used to publish accepted or validated

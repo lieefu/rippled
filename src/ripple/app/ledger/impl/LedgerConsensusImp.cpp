@@ -35,6 +35,7 @@
 #include <ripple/app/misc/NetworkOPs.h>
 #include <ripple/app/misc/TxQ.h>
 #include <ripple/app/misc/Validations.h>
+#include <ripple/app/misc/ValidatorList.h>
 #include <ripple/app/tx/apply.h>
 #include <ripple/basics/contract.h>
 #include <ripple/basics/CountedObject.h>
@@ -72,8 +73,6 @@ LedgerConsensusImp<Traits>::LedgerConsensusImp (
     , ourID_ (calcNodeID (app.nodeIdentity().first))
     , state_ (State::open)
     , closeTime_ {}
-    , valPublic_ (app_.config().VALIDATION_PUB)
-    , valSecret_ (app_.config().VALIDATION_PRIV)
     , consensusFail_ (false)
     , roundTime_ (0)
     , closePercent_ (0)
@@ -1010,6 +1009,9 @@ void LedgerConsensusImp<Traits>::accept (TxSet_t const& set)
                         // Stuff the ledger with transactions from the queue.
                         return app_.getTxQ().accept(app_, view);
                     });
+        // Signal a potential fee change to subscribers after the open ledger
+        // is created
+        app_.getOPs().reportFeeChange();
     }
 
     ledgerMaster_.switchLCL (sharedLCL);
@@ -1267,14 +1269,14 @@ LedgerConsensusImp<Traits>::makeInitialPosition () ->
             app_.getValidations().getValidations (
                 previousLedger_->info().parentHash);
 
-        auto const count = std::count_if (
+        std::size_t const count = std::count_if (
             validations.begin(), validations.end(),
             [](auto const& v)
             {
                 return v.second->isTrusted();
             });
 
-        if (count >= ledgerMaster_.getMinValidations())
+        if (count >= app_.validators ().quorum ())
         {
             feeVote_.doVoting (
                 previousLedger_,
@@ -1777,6 +1779,20 @@ void LedgerConsensusImp<Traits>::addLoad(STValidation::ref val)
 
     if (fee > feeTrack.getLoadBase())
         val->setFieldU32(sfLoadFee, fee);
+}
+
+template <class Traits>
+PublicKey const& LedgerConsensusImp<Traits>::getValidationPublicKey () const
+{
+    return valPublic_;
+}
+
+template <class Traits>
+void LedgerConsensusImp<Traits>::setValidationKeys (
+    SecretKey const& valSecret, PublicKey const& valPublic)
+{
+    valSecret_ = valSecret;
+    valPublic_ = valPublic;
 }
 
 //------------------------------------------------------------------------------

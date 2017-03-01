@@ -392,8 +392,6 @@ def config_base(env):
             env.Prepend(LIBPATH=['%s/lib' % openssl])
         except:
             pass
-        if not 'vcxproj' in COMMAND_LINE_TARGETS:
-            env.Append(CPPDEFINES=['NO_LOG_UNHANDLED_EXCEPTIONS'])
 
     # handle command-line arguments
     profile_jemalloc = ARGUMENTS.get('profile-jemalloc')
@@ -554,6 +552,13 @@ def config_env(toolchain, variant, env):
         if toolchain == 'clang':
             env.Append(CCFLAGS=['-Wno-redeclared-class-member'])
             env.Append(CPPDEFINES=['BOOST_ASIO_HAS_STD_ARRAY'])
+            try:
+                ldd_ver = subprocess.check_output([env['CLANG_CXX'], '-fuse-ld=lld', '-Wl,--version'],
+                                            stderr=subprocess.STDOUT).strip()
+                # have lld
+                env.Append(LINKFLAGS=['-fuse-ld=lld'])
+            except:
+                pass
 
         env.Append(CXXFLAGS=[
             '-frtti',
@@ -573,7 +578,6 @@ def config_env(toolchain, variant, env):
             env.Append(CCFLAGS=[
                 '-Wno-deprecated',
                 '-Wno-deprecated-declarations',
-                '-Wno-unused-variable',
                 '-Wno-unused-function',
                 ])
         else:
@@ -586,11 +590,17 @@ def config_env(toolchain, variant, env):
                     '-D_GLIBCXX_USE_CXX11_ABI' : 0
                 })
             if toolchain == 'gcc':
-
                 env.Append(CCFLAGS=[
                     '-Wno-unused-but-set-variable',
                     '-Wno-deprecated',
                     ])
+                try:
+                    ldd_ver = subprocess.check_output([env['GNU_CXX'], '-fuse-ld=gold', '-Wl,--version'],
+                                                      stderr=subprocess.STDOUT).strip()
+                    # have ld.gold
+                    env.Append(LINKFLAGS=['-fuse-ld=gold'])
+                except:
+                    pass
 
         boost_libs = [
             # resist the temptation to alphabetize these. coroutine
@@ -965,7 +975,7 @@ def get_classic_sources(toolchain):
     append_sources(result, *list_sources('src/test/shamap', '.cpp'))
     append_sources(result, *list_sources('src/test/jtx', '.cpp'))
 
-    
+
     if use_shp(toolchain):
         cc_flags = {'CCFLAGS': ['--system-header-prefix=rocksdb2']}
     else:
@@ -1234,7 +1244,8 @@ for tu_style in ['classic', 'unity']:
             if should_build_ninja(tu_style, toolchain, variant):
                 print('Generating ninja: {}:{}:{}'.format(tu_style, toolchain, variant))
                 scons_to_ninja.GenerateNinjaFile(
-                    [object_builder.env] + object_builder.child_envs,
+                     # add base env last to ensure protoc targets are added
+                    [object_builder.env] + object_builder.child_envs + [base],
                     dest_file='build.ninja')
 
 for key, value in aliases.iteritems():

@@ -25,10 +25,9 @@
 #include <ripple/basics/contract.h>
 #include <ripple/basics/StringUtilities.h>
 #include <ripple/basics/Sustain.h>
-#include <ripple/basics/ThreadName.h>
 #include <ripple/core/Config.h>
 #include <ripple/core/ConfigSections.h>
-#include <ripple/core/ThreadEntry.h>
+#include <ripple/core/TerminateHandler.h>
 #include <ripple/core/TimeKeeper.h>
 #include <ripple/crypto/csprng.h>
 #include <ripple/json/to_string.h>
@@ -37,12 +36,14 @@
 #include <ripple/rpc/RPCHandler.h>
 #include <ripple/protocol/BuildInfo.h>
 #include <ripple/beast/clock/basic_seconds_clock.h>
+#include <ripple/beast/core/CurrentThreadName.h>
 #include <ripple/beast/core/Time.h>
 #include <ripple/beast/utility/Debug.h>
 #include <beast/unit_test/dstream.hpp>
 #include <beast/unit_test/global_suites.hpp>
 #include <beast/unit_test/match.hpp>
 #include <beast/unit_test/reporter.hpp>
+#include <test/quiet_reporter.h>
 #include <google/protobuf/stubs/common.h>
 #include <boost/program_options.hpp>
 #include <cstdlib>
@@ -168,13 +169,21 @@ void printHelp (const po::options_description& desc)
 
 static int runUnitTests(
     std::string const& pattern,
-    std::string const& argument)
+    std::string const& argument,
+    bool quiet,
+    bool log)
 {
     using namespace beast::unit_test;
+    using namespace ripple::test;
     beast::unit_test::dstream dout{std::cout};
-    reporter r{dout};
-    r.arg(argument);
-    bool const anyFailed = r.run_each_if(
+
+    std::unique_ptr<runner> r;
+    if(quiet)
+        r = std::make_unique<quiet_reporter>(dout, log);
+    else
+        r = std::make_unique<reporter>(dout);
+    r->arg(argument);
+    bool const anyFailed = r->run_each_if(
         global_suites(), match_auto(pattern));
     if(anyFailed)
         return EXIT_FAILURE;
@@ -190,7 +199,7 @@ int run (int argc, char** argv)
 
     using namespace std;
 
-    setCallingThreadName ("main");
+    beast::setCurrentThreadName ("rippled: main");
 
     po::variables_map vm;
 
@@ -216,9 +225,10 @@ int run (int argc, char** argv)
     ("standalone,a", "Run with no peers.")
     ("unittest,u", po::value <std::string> ()->implicit_value (""), "Perform unit tests.")
     ("unittest-arg", po::value <std::string> ()->implicit_value (""), "Supplies argument to unit tests.")
+    ("unittest-log", po::value <std::string> ()->implicit_value (""), "Force unit test log output, even in quiet mode.")
     ("parameters", po::value< vector<string> > (), "Specify comma separated parameters.")
     ("quiet,q", "Reduce diagnotics.")
-    ("quorum", po::value <int> (), "Set the validation quorum.")
+    ("quorum", po::value <std::size_t> (), "Override the minimum validation quorum.")
     ("silent", "No output to the console after startup.")
     ("verbose,v", "Verbose logging.")
     ("load", "Load the current ledger from the local DB.")
@@ -277,9 +287,10 @@ int run (int argc, char** argv)
 
         if (vm.count("unittest-arg"))
             argument = vm["unittest-arg"].as<std::string>();
-
         return runUnitTests(
-            vm["unittest"].as<std::string>(), argument);
+            vm["unittest"].as<std::string>(), argument,
+            bool (vm.count ("quiet")),
+            bool (vm.count ("unittest-log")));
     }
 
     auto config = std::make_unique<Config>();
@@ -338,9 +349,6 @@ int run (int argc, char** argv)
         }
 
         config->START_UP = Config::NETWORK;
-
-        if (config->VALIDATION_QUORUM < 2)
-            config->VALIDATION_QUORUM = 2;
     }
 
     // Override the RPC destination IP address. This must
@@ -385,11 +393,7 @@ int run (int argc, char** argv)
     {
         try
         {
-            config->VALIDATION_QUORUM = vm["quorum"].as <int> ();
-            config->LOCK_QUORUM = true;
-
-            if (config->VALIDATION_QUORUM < 0)
-                Throw<std::domain_error> ("");
+            config->VALIDATION_QUORUM = vm["quorum"].as <std::size_t> ();
         }
         catch(std::exception const&)
         {
@@ -460,8 +464,7 @@ int run (int argc, char** argv)
         app->doStart();
 
         // Block until we get a stop RPC.
-        ripple::threadEntry (
-            app.get(), &Application::run, "Main::run()");
+        app->run();
 
         // Try to write out some entropy to use the next time we start.
         auto entropy = getEntropyFile (app->config());
@@ -472,7 +475,7 @@ int run (int argc, char** argv)
     }
 
     // We have an RPC command to process:
-    setCallingThreadName ("rpc");
+    beast::setCurrentThreadName ("rippled: rpc");
     return RPCCall::fromCommandLine (
         *config,
         vm["parameters"].as<std::vector<std::string>>(),
@@ -526,9 +529,8 @@ int main1 (int argc, char** argv)
 #endif
 
     atexit(&google::protobuf::ShutdownProtobufLibrary);
-#ifndef NO_LOG_UNHANDLED_EXCEPTIONS
+
     std::set_terminate(ripple::terminateHandler);
-#endif
 
     auto const result (ripple::run (argc, argv));
 
