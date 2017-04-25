@@ -142,7 +142,7 @@ RippleCalc::Output RippleCalc::rippleCalculate (
             auto const timeIt = flowV2FlowDebugInfo.timeBlock ("main");
             flowV2Out = flow (flowV2SB, saDstAmountReq, uSrcAccountID,
                 uDstAccountID, spsPaths, defaultPaths, partialPayment,
-                ownerPaysTransferFee, limitQuality, sendMax, j,
+                ownerPaysTransferFee, /* offerCrossing */ false, limitQuality, sendMax, j,
                 compareFlowV1V2 ? &flowV2FlowDebugInfo : nullptr);
         }
         catch (std::exception& e)
@@ -328,7 +328,7 @@ TER RippleCalc::rippleCalculate (detail::FlowDebugInfo* flowDebugInfo)
     boost::container::flat_set<uint256> unfundedOffersFromBestPaths;
 
     int iPass = 0;
-    auto const dcSwitch = amendmentRIPD1141(view.info().parentCloseTime);
+    auto const dcSwitch = fix1141(view.info().parentCloseTime);
 
     while (resultCode == temUNCERTAIN)
     {

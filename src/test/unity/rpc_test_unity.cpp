@@ -24,6 +24,7 @@
 #include <test/rpc/AccountOffers_test.cpp>
 #include <test/rpc/AccountSet_test.cpp>
 #include <test/rpc/Book_test.cpp>
+#include <test/rpc/Feature_test.cpp>
 #include <test/rpc/GatewayBalances_test.cpp>
 #include <test/rpc/GetCounts_test.cpp>
 #include <test/rpc/JSONRPC_test.cpp>
@@ -33,9 +34,12 @@
 #include <test/rpc/LedgerRPC_test.cpp>
 #include <test/rpc/LedgerRequestRPC_test.cpp>
 #include <test/rpc/NoRipple_test.cpp>
+#include <test/rpc/NoRippleCheck_test.cpp>
+#include <test/rpc/Peers_test.cpp>
 #include <test/rpc/RobustTransaction_test.cpp>
 #include <test/rpc/RPCOverload_test.cpp>
 #include <test/rpc/ServerInfo_test.cpp>
 #include <test/rpc/Status_test.cpp>
 #include <test/rpc/Subscribe_test.cpp>
 #include <test/rpc/TransactionEntry_test.cpp>
+#include <test/rpc/TransactionHistory_test.cpp>

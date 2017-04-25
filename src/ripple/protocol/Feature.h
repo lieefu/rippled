@@ -43,11 +43,15 @@ extern uint256 const featureCompareFlowV1V2;
 extern uint256 const featureSHAMapV2;
 extern uint256 const featurePayChan;
 extern uint256 const featureFlow;
+extern uint256 const featureCompareTakerFlowCross;
+extern uint256 const featureFlowCross;
 extern uint256 const featureCryptoConditions;
 extern uint256 const featureTickSize;
 extern uint256 const fix1368;
 extern uint256 const featureEscrow;
 extern uint256 const featureCryptoConditionsSuite;
+extern uint256 const fix1373;
+extern uint256 const featureEnforceInvariants;
 
 } // ripple
 

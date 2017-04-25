@@ -22,8 +22,8 @@
 
 namespace ripple {
 
-Stoppable::Stoppable (char const* name, RootStoppable& root)
-    : m_name (name)
+Stoppable::Stoppable (std::string name, RootStoppable& root)
+    : m_name (std::move (name))
     , m_root (root)
     , m_child (this)
     , m_started (false)
@@ -32,8 +32,8 @@ Stoppable::Stoppable (char const* name, RootStoppable& root)
 {
 }
 
-Stoppable::Stoppable (char const* name, Stoppable& parent)
-    : m_name (name)
+Stoppable::Stoppable (std::string name, Stoppable& parent)
+    : m_name (std::move (name))
     , m_root (parent.m_root)
     , m_child (this)
     , m_started (false)
@@ -157,17 +157,16 @@ void Stoppable::stopRecursive (beast::Journal j)
 
 //------------------------------------------------------------------------------
 
-RootStoppable::RootStoppable (char const* name)
-    : Stoppable (name, *this)
+RootStoppable::RootStoppable (std::string name)
+    : Stoppable (std::move (name), *this)
     , m_prepared (false)
     , m_calledStop (false)
-    , m_calledStopAsync (false)
 {
 }
 
 bool RootStoppable::isStopping() const
 {
-    return m_calledStopAsync;
+    return m_calledStop;
 }
 
 void RootStoppable::prepare ()
@@ -191,25 +190,30 @@ void RootStoppable::stop (beast::Journal j)
     // Must have a prior call to start()
     assert (m_started);
 
-    {
-        std::lock_guard<std::mutex> lock(m_);
-        if (m_calledStop)
-        {
-            if (auto stream = j.warn())
-                stream << "Stoppable::stop called again";
-            return;
-        }
-        m_calledStop = true;
-        c_.notify_all();
-    }
-    stopAsync (j);
-    stopRecursive (j);
+    if (stopAsync (j))
+        stopRecursive (j);
 }
 
-void RootStoppable::stopAsync(beast::Journal j)
+bool RootStoppable::stopAsync(beast::Journal j)
 {
-    if (m_calledStopAsync.exchange (true) == false)
-        stopAsyncRecursive(j);
+    bool alreadyCalled;
+    {
+        // Even though m_calledStop is atomic, we change its value under a
+        // lock.  This removes a small timing window that occurs if the
+        // waiting thread is handling a spurious wakeup while m_calledStop
+        // changes state.
+        std::unique_lock<std::mutex> lock (m_);
+        alreadyCalled = m_calledStop.exchange (true);
+    }
+    if (alreadyCalled)
+    {
+        if (auto stream = j.warn())
+            stream << "Stoppable::stop called again";
+        return false;
+    }
+    c_.notify_all();
+    stopAsyncRecursive(j);
+    return true;
 }
 
 }

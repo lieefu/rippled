@@ -31,7 +31,7 @@
 
 namespace ripple {
 
-NetClock::time_point const& amendmentRIPD1141SoTime ()
+NetClock::time_point const& fix1141Time ()
 {
     using namespace std::chrono_literals;
     // Fri July 1, 2016 10:00:00am PDT
@@ -39,12 +39,12 @@ NetClock::time_point const& amendmentRIPD1141SoTime ()
     return soTime;
 }
 
-bool amendmentRIPD1141 (NetClock::time_point const closeTime)
+bool fix1141 (NetClock::time_point const closeTime)
 {
-    return closeTime > amendmentRIPD1141SoTime();
+    return closeTime > fix1141Time();
 }
 
-NetClock::time_point const& amendmentRIPD1274SoTime ()
+NetClock::time_point const& fix1274Time ()
 {
     using namespace std::chrono_literals;
     // Fri Sep 30, 2016 10:00:00am PDT
@@ -53,12 +53,12 @@ NetClock::time_point const& amendmentRIPD1274SoTime ()
     return soTime;
 }
 
-bool amendmentRIPD1274 (NetClock::time_point const closeTime)
+bool fix1274 (NetClock::time_point const closeTime)
 {
-    return closeTime > amendmentRIPD1274SoTime();
+    return closeTime > fix1274Time();
 }
 
-NetClock::time_point const& amendmentRIPD1298SoTime ()
+NetClock::time_point const& fix1298Time ()
 {
     using namespace std::chrono_literals;
     // Wed Dec 21, 2016 10:00:00am PST
@@ -67,12 +67,12 @@ NetClock::time_point const& amendmentRIPD1298SoTime ()
     return soTime;
 }
 
-bool amendmentRIPD1298 (NetClock::time_point const closeTime)
+bool fix1298 (NetClock::time_point const closeTime)
 {
-    return closeTime > amendmentRIPD1298SoTime();
+    return closeTime > fix1298Time();
 }
 
-NetClock::time_point const& amendmentRIPD1443SoTime ()
+NetClock::time_point const& fix1443Time ()
 {
     using namespace std::chrono_literals;
     // Sat Mar 11, 2017 05:00:00pm PST
@@ -81,9 +81,23 @@ NetClock::time_point const& amendmentRIPD1443SoTime ()
     return soTime;
 }
 
-bool amendmentRIPD1443 (NetClock::time_point const closeTime)
+bool fix1443 (NetClock::time_point const closeTime)
 {
-    return closeTime > amendmentRIPD1443SoTime();
+    return closeTime > fix1443Time();
+}
+
+NetClock::time_point const& fix1449Time ()
+{
+    using namespace std::chrono_literals;
+    // Thurs, Mar 30, 2017 01:00:00pm PDT
+    static NetClock::time_point const soTime{544219200s};
+
+    return soTime;
+}
+
+bool fix1449 (NetClock::time_point const closeTime)
+{
+    return closeTime > fix1449Time();
 }
 
 // VFALCO NOTE A copy of the other one for now
@@ -162,59 +176,7 @@ accountHolds (ReadView const& view,
     STAmount amount;
     if (isXRP(currency))
     {
-        // XRP: return balance minus reserve
-        if (amendmentRIPD1141 (view.info ().parentCloseTime))
-        {
-            auto const sle = view.read(
-                keylet::account(account));
-            auto const ownerCount =
-                view.ownerCountHook (account, sle->getFieldU32 (sfOwnerCount));
-            auto const reserve =
-                    view.fees().accountReserve(ownerCount);
-
-            auto const fullBalance =
-                sle->getFieldAmount(sfBalance);
-
-            auto const balance = view.balanceHook(
-                account, issuer, fullBalance).xrp();
-
-            if (balance < reserve)
-                amount.clear ();
-            else
-                amount = balance - reserve;
-
-            JLOG (j.trace()) << "accountHolds:" <<
-                " account=" << to_string (account) <<
-                " amount=" << amount.getFullText () <<
-                " fullBalance=" << to_string (fullBalance.xrp()) <<
-                " balance=" << to_string (balance) <<
-                " reserve=" << to_string (reserve);
-
-            return amount;
-        }
-        else
-        {
-            // pre-switchover
-            // XRP: return balance minus reserve
-            auto const sle = view.read(
-                keylet::account(account));
-            auto const reserve =
-                    view.fees().accountReserve(
-                        sle->getFieldU32(sfOwnerCount));
-            auto const balance =
-                    sle->getFieldAmount(sfBalance).xrp ();
-            if (balance < reserve)
-                amount.clear ();
-            else
-                amount = balance - reserve;
-            JLOG (j.trace()) << "accountHolds:" <<
-                    " account=" << to_string (account) <<
-                    " amount=" << amount.getFullText () <<
-                    " balance=" << to_string (balance) <<
-                    " reserve=" << to_string (reserve);
-            return view.balanceHook(
-                account, issuer, amount);
-        }
+        return {xrpLiquid (view, account, 0, j)};
     }
 
     // IOU: Return balance on trust line modulo freeze
@@ -274,6 +236,115 @@ accountFunds (ReadView const& view, AccountID const& id,
             " saFunds=" << saFunds.getFullText ();
     }
     return saFunds;
+}
+
+// Prevent ownerCount from wrapping under error conditions.
+//
+// adjustment allows the ownerCount to be adjusted up or down in multiple steps.
+// If id != boost.none, then do error reporting.
+//
+// Returns adjusted owner count.
+static
+std::uint32_t
+confineOwnerCount (std::uint32_t current, std::int32_t adjustment,
+    boost::optional<AccountID> const& id = boost::none,
+    beast::Journal j = beast::Journal{})
+{
+    std::uint32_t adjusted {current + adjustment};
+    if (adjustment > 0)
+    {
+        // Overflow is well defined on unsigned
+        if (adjusted < current)
+        {
+            if (id)
+            {
+                JLOG (j.fatal()) <<
+                    "Account " << *id <<
+                    " owner count exceeds max!";
+            }
+            adjusted = std::numeric_limits<std::uint32_t>::max ();
+        }
+    }
+    else
+    {
+        // Underflow is well defined on unsigned
+        if (adjusted > current)
+        {
+            if (id)
+            {
+                JLOG (j.fatal()) <<
+                    "Account " << *id <<
+                    " owner count set below 0!";
+            }
+            adjusted = 0;
+            assert(!id);
+        }
+    }
+    return adjusted;
+}
+
+XRPAmount
+xrpLiquid (ReadView const& view, AccountID const& id,
+    std::int32_t ownerCountAdj, beast::Journal j)
+{
+    auto const sle = view.read(keylet::account(id));
+    if (sle == nullptr)
+        return zero;
+
+    // Return balance minus reserve
+    if (fix1141 (view.info ().parentCloseTime))
+    {
+        std::uint32_t const ownerCount = confineOwnerCount (
+            view.ownerCountHook (id, sle->getFieldU32 (sfOwnerCount)),
+                ownerCountAdj);
+
+        auto const reserve =
+            view.fees().accountReserve(ownerCount);
+
+        auto const fullBalance =
+            sle->getFieldAmount(sfBalance);
+
+        auto const balance = view.balanceHook(id, xrpAccount(), fullBalance);
+
+        STAmount amount = balance - reserve;
+        if (balance < reserve)
+            amount.clear ();
+
+        JLOG (j.trace()) << "accountHolds:" <<
+            " account=" << to_string (id) <<
+            " amount=" << amount.getFullText() <<
+            " fullBalance=" << fullBalance.getFullText() <<
+            " balance=" << balance.getFullText() <<
+            " reserve=" << to_string (reserve) <<
+            " ownerCount=" << to_string (ownerCount) <<
+            " ownerCountAdj=" << to_string (ownerCountAdj);
+
+        return amount.xrp();
+    }
+    else
+    {
+        // pre-switchover
+        // XRP: return balance minus reserve
+        std::uint32_t const ownerCount =
+            confineOwnerCount (sle->getFieldU32 (sfOwnerCount), ownerCountAdj);
+        auto const reserve =
+            view.fees().accountReserve(sle->getFieldU32(sfOwnerCount));
+        auto const balance = sle->getFieldAmount(sfBalance);
+
+        STAmount amount = balance - reserve;
+        if (balance < reserve)
+            amount.clear ();
+
+        JLOG (j.trace()) << "accountHolds:" <<
+            " account=" << to_string (id) <<
+            " amount=" << amount.getFullText() <<
+            " balance=" << balance.getFullText() <<
+            " reserve=" << to_string (reserve) <<
+            " ownerCount=" << to_string (ownerCount) <<
+            " ownerCountAdj=" << to_string (ownerCountAdj);
+
+        return view.balanceHook(id, xrpAccount(), amount).xrp();
+    }
 }
 
 void
@@ -664,37 +735,12 @@ hashOfSeq (ReadView const& ledger, LedgerIndex seq,
 void
 adjustOwnerCount (ApplyView& view,
     std::shared_ptr<SLE> const& sle,
-        int amount, beast::Journal j)
+        std::int32_t amount, beast::Journal j)
 {
     assert(amount != 0);
-    auto const current =
-        sle->getFieldU32 (sfOwnerCount);
-    auto adjusted = current + amount;
+    std::uint32_t const current {sle->getFieldU32 (sfOwnerCount)};
     AccountID const id = (*sle)[sfAccount];
-    if (amount > 0)
-    {
-        // Overflow is well defined on unsigned
-        if (adjusted < current)
-        {
-            JLOG (j.fatal()) <<
-                "Account " << id <<
-                " owner count exceeds max!";
-            adjusted =
-                std::numeric_limits<std::uint32_t>::max ();
-        }
-    }
-    else
-    {
-        // Underflow is well defined on unsigned
-        if (adjusted > current)
-        {
-            JLOG (j.fatal()) <<
-                "Account " << id <<
-                " owner count set below 0!";
-            adjusted = 0;
-            assert(false);
-        }
-    }
+    std::uint32_t const adjusted = confineOwnerCount (current, amount, id, j);
     view.adjustOwnerCountHook (id, current, adjusted);
     sle->setFieldU32 (sfOwnerCount, adjusted);
     view.update(sle);
@@ -1243,7 +1289,7 @@ offerDelete (ApplyView& view,
 
 // Direct send w/o fees:
 // - Redeeming IOUs and/or sending sender's own IOUs.
-// - Create trust line of needed.
+// - Create trust line if needed.
 // --> bCheckIssuer : normally require issuer to be involved.
 TER
 rippleCredit (ApplyView& view,
@@ -1442,7 +1488,7 @@ rippleSend (ApplyView& view,
 
     // Calculate the amount to transfer accounting
     // for any transfer fees:
-    if (!amendmentRIPD1141 (view.info ().parentCloseTime))
+    if (!fix1141 (view.info ().parentCloseTime))
     {
         STAmount const saTransitFee = rippleTransferFee (
             view, uSenderID, uReceiverID, issuer, saAmount, j);
@@ -1494,7 +1540,7 @@ accountSend (ApplyView& view,
         return rippleSend (view, uSenderID, uReceiverID, saAmount, saActual, j);
     }
 
-    auto const fv2Switch = amendmentRIPD1141 (view.info ().parentCloseTime);
+    auto const fv2Switch = fix1141 (view.info ().parentCloseTime);
     if (!fv2Switch)
     {
         auto const dummyBalance = saAmount.zeroed();

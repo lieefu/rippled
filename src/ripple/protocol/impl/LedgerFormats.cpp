@@ -19,6 +19,11 @@
 
 #include <BeastConfig.h>
 #include <ripple/protocol/LedgerFormats.h>
+#include <ripple/protocol/ErrorCodes.h>
+#include <ripple/protocol/JsonFields.h>
+#include <algorithm>
+#include <array>
+#include <utility>
 
 namespace ripple {
 

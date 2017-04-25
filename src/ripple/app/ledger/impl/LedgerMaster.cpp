@@ -828,6 +828,8 @@ LedgerMaster::consensusBuilt(
     if (standalone_)
         return;
 
+    mLedgerHistory.builtLedger (ledger, std::move (consensus));
+
     if (ledger->info().seq <= mValidLedgerSeq)
     {
         auto stream = app_.journal ("LedgerConsensus").info();
@@ -912,8 +914,6 @@ LedgerMaster::consensusBuilt(
             << "Consensus triggered check of ledger";
         checkAccept (maxLedger, maxSeq);
     }
-
-    mLedgerHistory.builtLedger (ledger, std::move (consensus));
 }
 
 void
@@ -1044,7 +1044,7 @@ LedgerMaster::findNewLedgersToPublish ()
             }
 
             // Can we try to acquire the ledger we need?
-            if (! ledger && (++acqCount < 4))
+            if (! ledger && (++acqCount < ledger_fetch_size_))
                 ledger = app_.getInboundLedgers ().acquire(
                     *hash, seq, InboundLedger::fcGENERIC);
 

@@ -108,7 +108,7 @@ JSS ( check_nodes );                // in: LedgerCleaner
 JSS ( clear );                      // in/out: FetchInfo
 JSS ( close_flags );                // out: LedgerToJson
 JSS ( close_time );                 // in: Application, out: NetworkOPs,
-                                    //      LedgerProposal, LedgerToJson
+                                    //      RCLCxPeerPos, LedgerToJson
 JSS ( close_time_estimated );       // in: Application, out: LedgerToJson
 JSS ( close_time_human );           // out: LedgerToJson
 JSS ( close_time_offset );          // out: NetworkOPs
@@ -159,6 +159,7 @@ JSS ( error );                      // out: error
 JSS ( error_code );                 // out: error
 JSS ( error_exception );            // out: Submit
 JSS ( error_message );              // out: error
+JSS ( escrow );                     // in: LedgerEntry
 JSS ( expand );                     // in: handler/Ledger
 JSS ( expected_ledger_size );       // out: TxQ
 JSS ( expiration );                 // out: AccountOffers, AccountChannels
@@ -314,9 +315,10 @@ JSS ( password );                   // in: Subscribe
 JSS ( paths );                      // in: RipplePathFind
 JSS ( paths_canonical );            // out: RipplePathFind
 JSS ( paths_computed );             // out: PathRequest, RipplePathFind
+JSS ( payment_channel );            // in: LedgerEntry
 JSS ( peer );                       // in: AccountLines
 JSS ( peer_authorized );            // out: AccountLines
-JSS ( peer_id );                    // out: LedgerProposal
+JSS ( peer_id );                    // out: RCLCxPeerPos
 JSS ( peers );                      // out: InboundLedger, handlers/Peers, Overlay
 JSS ( port );                       // in: Connect
 JSS ( previous_ledger );            // out: LedgerPropose
@@ -408,7 +410,7 @@ JSS ( total_coins );                // out: LedgerToJson
 JSS ( transTreeHash );              // out: ledger/Ledger.cpp
 JSS ( transaction );                // in: Tx
                                     // out: NetworkOPs, AcceptedLedgerTx,
-JSS ( transaction_hash );           // out: LedgerProposal, LedgerToJson
+JSS ( transaction_hash );           // out: RCLCxPeerPos, LedgerToJson
 JSS ( transactions );               // out: LedgerToJson,
                                     // in: AccountTx*, Unsubscribe
 JSS ( transitions );                // out: NetworkOPs

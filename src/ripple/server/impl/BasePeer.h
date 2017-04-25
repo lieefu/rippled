@@ -24,6 +24,7 @@
 #include <ripple/server/impl/io_list.h>
 #include <ripple/beast/utility/WrappedSink.h>
 #include <boost/asio.hpp>
+#include <atomic>
 #include <cassert>
 #include <functional>
 #include <string>
@@ -49,7 +50,6 @@ protected:
 
     boost::asio::io_service::work work_;
     boost::asio::io_service::strand strand_;
-    error_code ec_;
 
 public:
     BasePeer(Port const& port, Handler& handler,
@@ -59,11 +59,6 @@ public:
 
     void
     close() override;
-
-protected:
-    template<class String>
-    void
-    fail(error_code ec, String const& what);
 
 private:
     Impl&
@@ -86,8 +81,8 @@ BasePeer(Port const& port, Handler& handler,
     , remote_address_(remote_address)
     , sink_(journal.sink(),
         []
-        { 
-            static int id = 0;
+        {
+            static std::atomic<unsigned> id{0};
             return "##" + std::to_string(++id) + " ";
         }())
     , j_(sink_)
@@ -106,23 +101,6 @@ close()
             &BasePeer::close, impl().shared_from_this()));
     error_code ec;
     impl().ws_.lowest_layer().close(ec);
-}
-
-template<class Handler, class Impl>
-template<class String>
-void
-BasePeer<Handler, Impl>::
-fail(error_code ec, String const& what)
-{
-    assert(strand_.running_in_this_thread());
-    if(! ec_ &&
-        ec != boost::asio::error::operation_aborted)
-    {
-        ec_ = ec;
-        JLOG(j_.trace()) <<
-            what << ": " << ec.message();
-        impl().ws_.lowest_layer().close(ec);
-    }
 }
 
 } // ripple

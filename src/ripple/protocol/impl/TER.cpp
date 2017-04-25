@@ -19,12 +19,19 @@
 
 #include <BeastConfig.h>
 #include <ripple/protocol/TER.h>
+#include <boost/range/adaptor/transformed.hpp>
 #include <unordered_map>
 #include <type_traits>
 
 namespace ripple {
 
-bool transResultInfo (TER code, std::string& token, std::string& text)
+namespace detail {
+
+static
+std::unordered_map<
+    std::underlying_type_t<TER>,
+    std::pair<char const* const, char const* const>> const&
+transResults()
 {
     static
     std::unordered_map<
@@ -64,6 +71,7 @@ bool transResultInfo (TER code, std::string& token, std::string& text)
         { tecDST_TAG_NEEDED,         { "tecDST_TAG_NEEDED",        "A destination tag is required."                                                } },
         { tecINTERNAL,               { "tecINTERNAL",              "An internal error has occurred during processing."                             } },
         { tecCRYPTOCONDITION_ERROR,  { "tecCRYPTOCONDITION_ERROR", "Malformed, invalid, or mismatched conditional or fulfillment."                 } },
+        { tecINVARIANT_FAILED,       { "tecINVARIANT_FAILED",      "One or more invariants for the transaction were not satisfied."                } },
 
         { tefALREADY,                { "tefALREADY",               "The exact transaction was already in this ledger."                             } },
         { tefBAD_ADD_AUTH,           { "tefBAD_ADD_AUTH",          "Not authorized to add account."                                                } },
@@ -79,9 +87,10 @@ bool transResultInfo (TER code, std::string& token, std::string& text)
         { tefMAX_LEDGER,             { "tefMAX_LEDGER",            "Ledger sequence too high."                                                     } },
         { tefNO_AUTH_REQUIRED,       { "tefNO_AUTH_REQUIRED",      "Auth is not required."                                                         } },
         { tefNOT_MULTI_SIGNING,      { "tefNOT_MULTI_SIGNING",     "Account has no appropriate list of multi-signers."                             } },
-        { tefPAST_SEQ,               { "tefPAST_SEQ",              "This sequence number has already past."                                        } },
+        { tefPAST_SEQ,               { "tefPAST_SEQ",              "This sequence number has already passed."                                      } },
         { tefWRONG_PRIOR,            { "tefWRONG_PRIOR",           "This previous transaction does not match."                                     } },
         { tefBAD_AUTH_MASTER,        { "tefBAD_AUTH_MASTER",       "Auth for unclaimed account needs correct master key."                          } },
+        { tefINVARIANT_FAILED,       { "tefINVARIANT_FAILED",      "Fee claim violated invariants for the transaction."                            } },
 
         { telLOCAL_ERROR,            { "telLOCAL_ERROR",           "Local failure."                                                                } },
         { telBAD_DOMAIN,             { "telBAD_DOMAIN",            "Domain too long."                                                              } },
@@ -139,6 +148,14 @@ bool transResultInfo (TER code, std::string& token, std::string& text)
 
         { tesSUCCESS,                { "tesSUCCESS",               "The transaction was applied. Only final in a validated ledger."                } },
     };
+    return results;
+}
+
+}
+
+bool transResultInfo (TER code, std::string& token, std::string& text)
+{
+    auto& results = detail::transResults();
 
     auto const r = results.find (
         static_cast<std::underlying_type_t<TER>> (code));
@@ -165,6 +182,37 @@ std::string transHuman (TER code)
     std::string text;
 
     return transResultInfo (code, token, text) ? text : "-";
+}
+
+boost::optional<TER>
+transCode(std::string const& token)
+{
+    static
+    auto const results = []
+    {
+        auto& byTer = detail::transResults();
+        auto range = boost::make_iterator_range(byTer.begin(),
+            byTer.end());
+        auto tRange = boost::adaptors::transform(
+            range,
+            [](auto const& r)
+            {
+            return std::make_pair(r.second.first, r.first);
+            }
+        );
+        std::unordered_map<
+            std::string,
+            std::underlying_type_t<TER>> const
+        byToken(tRange.begin(), tRange.end());
+        return byToken;
+    }();
+
+    auto const r = results.find(token);
+
+    if (r == results.end())
+        return boost::none;
+
+    return static_cast<TER>(r->second);
 }
 
 } // ripple

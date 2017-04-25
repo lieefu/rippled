@@ -23,7 +23,6 @@
 #include <ripple/app/main/DBInit.h>
 #include <ripple/app/main/BasicApp.h>
 #include <ripple/app/main/Tuning.h>
-#include <ripple/app/ledger/AcceptedLedger.h>
 #include <ripple/app/ledger/InboundLedgers.h>
 #include <ripple/app/ledger/LedgerMaster.h>
 #include <ripple/app/ledger/LedgerToJson.h>
@@ -32,58 +31,29 @@
 #include <ripple/app/ledger/PendingSaves.h>
 #include <ripple/app/ledger/InboundTransactions.h>
 #include <ripple/app/ledger/TransactionMaster.h>
-#include <ripple/app/main/CollectorManager.h>
 #include <ripple/app/main/LoadManager.h>
 #include <ripple/app/main/NodeIdentity.h>
 #include <ripple/app/main/NodeStoreScheduler.h>
 #include <ripple/app/misc/AmendmentTable.h>
 #include <ripple/app/misc/HashRouter.h>
 #include <ripple/app/misc/LoadFeeTrack.h>
-#include <ripple/app/misc/Manifest.h>
 #include <ripple/app/misc/NetworkOPs.h>
 #include <ripple/app/misc/SHAMapStore.h>
 #include <ripple/app/misc/TxQ.h>
-#include <ripple/app/misc/Validations.h>
-#include <ripple/app/misc/ValidatorList.h>
 #include <ripple/app/misc/ValidatorSite.h>
-#include <ripple/app/paths/Pathfinder.h>
 #include <ripple/app/paths/PathRequests.h>
 #include <ripple/app/tx/apply.h>
-#include <ripple/basics/contract.h>
-#include <ripple/basics/Log.h>
 #include <ripple/basics/ResolverAsio.h>
 #include <ripple/basics/Sustain.h>
-#include <ripple/basics/chrono.h>
 #include <ripple/json/json_reader.h>
-#include <ripple/json/to_string.h>
-#include <ripple/core/ConfigSections.h>
 #include <ripple/core/DeadlineTimer.h>
-#include <ripple/core/TimeKeeper.h>
-#include <ripple/ledger/CachedSLEs.h>
-#include <ripple/nodestore/Database.h>
 #include <ripple/nodestore/DummyScheduler.h>
-#include <ripple/nodestore/Manager.h>
 #include <ripple/overlay/Cluster.h>
 #include <ripple/overlay/make_Overlay.h>
-#include <ripple/protocol/Indexes.h>
-#include <ripple/protocol/PublicKey.h>
-#include <ripple/protocol/SecretKey.h>
 #include <ripple/protocol/STParsedJSON.h>
-#include <ripple/protocol/types.h>
-#include <ripple/resource/Charge.h>
-#include <ripple/resource/Consumer.h>
 #include <ripple/resource/Fees.h>
-#include <ripple/rpc/Context.h>
-#include <ripple/rpc/RPCHandler.h>
-#include <ripple/shamap/Family.h>
-#include <ripple/crypto/csprng.h>
 #include <ripple/beast/asio/io_latency_probe.h>
 #include <ripple/beast/core/LexicalCast.h>
-#include <beast/core/detail/ci_char_traits.hpp>
-#include <boost/asio/signal_set.hpp>
-#include <boost/optional.hpp>
-#include <atomic>
-#include <chrono>
 #include <fstream>
 
 namespace ripple {
@@ -325,7 +295,6 @@ public:
 
     NodeStoreScheduler m_nodeStoreScheduler;
     std::unique_ptr <SHAMapStore> m_shaMapStore;
-    std::unique_ptr <NodeStore::Database> m_nodeStore;
     PendingSaves pendingSaves_;
     AccountIDCache accountIDCache_;
     boost::optional<OpenLedger> openLedger_;
@@ -333,7 +302,6 @@ public:
     // These are not Stoppable-derived
     NodeCache m_tempNodeCache;
     std::unique_ptr <CollectorManager> m_collectorManager;
-    detail::AppFamily family_;
     CachedSLEs cachedSLEs_;
     std::pair<PublicKey, SecretKey> nodeIdentity_;
 
@@ -341,6 +309,8 @@ public:
 
     // These are Stoppable-related
     std::unique_ptr <JobQueue> m_jobQueue;
+    std::unique_ptr <NodeStore::Database> m_nodeStore;
+    detail::AppFamily family_;
     // VFALCO TODO Make OrderBookDB abstract
     OrderBookDB m_orderBookDB;
     std::unique_ptr <PathRequests> m_pathRequests;
@@ -363,6 +333,7 @@ public:
     std::unique_ptr <TxQ> txQ_;
     DeadlineTimer m_sweepTimer;
     DeadlineTimer m_entropyTimer;
+    bool startTimers_;
 
     std::unique_ptr <DatabaseCon> mTxnDB;
     std::unique_ptr <DatabaseCon> mLedgerDB;
@@ -415,8 +386,6 @@ public:
             logs_->journal ("SHAMapStore"), logs_->journal ("NodeObject"),
             m_txMaster, *config_))
 
-        , m_nodeStore (m_shaMapStore->makeDatabase ("NodeStore.main", 4))
-
         , accountIDCache_(128000)
 
         , m_tempNodeCache ("NodeCache", 16384, 90, stopwatch(),
@@ -424,8 +393,6 @@ public:
 
         , m_collectorManager (CollectorManager::New (
             config_->section (SECTION_INSIGHT), logs_->journal("Collector")))
-
-        , family_ (*this, *m_nodeStore, *m_collectorManager)
 
         , cachedSLEs_ (std::chrono::minutes(1), stopwatch())
 
@@ -442,6 +409,10 @@ public:
         //
         // Anything which calls addJob must be a descendant of the JobQueue
         //
+        , m_nodeStore (
+            m_shaMapStore->makeDatabase ("NodeStore.main", 4, *m_jobQueue))
+
+        , family_ (*this, *m_nodeStore, *m_collectorManager)
 
         , m_orderBookDB (*this, *m_jobQueue)
 
@@ -510,6 +481,8 @@ public:
 
         , m_entropyTimer (this)
 
+        , startTimers_ (false)
+
         , m_signals (get_io_service())
 
         , checkSigs_(true)
@@ -545,7 +518,7 @@ public:
     //--------------------------------------------------------------------------
 
     bool setup() override;
-    void doStart() override;
+    void doStart(bool withTimers) override;
     void run() override;
     bool isShutdown() override;
     void signalStop() override;
@@ -841,8 +814,11 @@ public:
             << "Application starting. Version is " << BuildInfo::getVersionString();
 
         using namespace std::chrono_literals;
-        m_sweepTimer.setExpiration (10s);
-        m_entropyTimer.setRecurringExpiration (5min);
+        if(startTimers_)
+        {
+            m_sweepTimer.setExpiration (10s);
+            m_entropyTimer.setRecurringExpiration (5min);
+        }
 
         m_io_latency_sampler.start();
 
@@ -871,9 +847,11 @@ public:
         //      things will happen.
         m_resolver->stop ();
 
-        m_sweepTimer.cancel ();
-
-        m_entropyTimer.cancel ();
+        if(startTimers_)
+        {
+            m_sweepTimer.cancel ();
+            m_entropyTimer.cancel ();
+        }
 
         mValidations->flush ();
 
@@ -1265,8 +1243,9 @@ bool ApplicationImp::setup()
 }
 
 void
-ApplicationImp::doStart()
+ApplicationImp::doStart(bool withTimers)
 {
+    startTimers_ = withTimers;
     prepare ();
     start ();
 }
@@ -1360,7 +1339,6 @@ ApplicationImp::startGenesisLedger()
         *genesis, timeKeeper().closeTime());
     next->updateSkipList ();
     next->setImmutable (*config_);
-    m_networkOPs->setLastCloseTime (next->info().closeTime);
     openLedger_.emplace(next, cachedSLEs_,
         logs_->journal("OpenLedger"));
     m_ledgerMaster->storeLedger(next);
@@ -1565,7 +1543,7 @@ bool ApplicationImp::loadOldLedger (
 {
     try
     {
-        std::shared_ptr<Ledger> loadLedger, replayLedger;
+        std::shared_ptr<Ledger const> loadLedger, replayLedger;
 
         if (isFileName)
         {
@@ -1670,7 +1648,6 @@ bool ApplicationImp::loadOldLedger (
         m_ledgerMaster->switchLCL (loadLedger);
         loadLedger->setValidated();
         m_ledgerMaster->setFullLedger(loadLedger, true, false);
-        m_networkOPs->setLastCloseTime (loadLedger->info().closeTime);
         openLedger_.emplace(loadLedger, cachedSLEs_,
             logs_->journal("OpenLedger"));
 
@@ -1955,9 +1932,9 @@ bool ApplicationImp::updateTables ()
         auto j = logs_->journal("NodeObject");
         NodeStore::DummyScheduler scheduler;
         std::unique_ptr <NodeStore::Database> source =
-            NodeStore::Manager::instance().make_Database ("NodeStore.import", scheduler,
-                j, 0,
-                config_->section(ConfigSection::importNodeDatabase ()));
+            NodeStore::Manager::instance().make_Database ("NodeStore.import",
+                scheduler, 0, *m_jobQueue,
+                config_->section(ConfigSection::importNodeDatabase ()), j);
 
         JLOG (j.warn())
             << "Node import from '" << source->getName () << "' to '"

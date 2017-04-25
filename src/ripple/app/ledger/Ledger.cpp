@@ -22,7 +22,7 @@
 #include <ripple/app/ledger/AcceptedLedger.h>
 #include <ripple/app/ledger/InboundLedgers.h>
 #include <ripple/app/ledger/LedgerMaster.h>
-#include <ripple/app/ledger/LedgerTiming.h>
+#include <ripple/consensus/LedgerTiming.h>
 #include <ripple/app/ledger/LedgerToJson.h>
 #include <ripple/app/ledger/OrderBookDB.h>
 #include <ripple/app/ledger/PendingSaves.h>
@@ -705,7 +705,7 @@ bool Ledger::walkLedger (beast::Journal j) const
     return missingNodes1.empty () && missingNodes2.empty ();
 }
 
-bool Ledger::assertSane (beast::Journal ledgerJ)
+bool Ledger::assertSane (beast::Journal ledgerJ) const
 {
     if (info_.hash.isNonZero () &&
             info_.accountHash.isNonZero () &&
@@ -942,6 +942,8 @@ static bool saveValidatedLedger (
                 JLOG (j.warn())
                     << "Transaction in ledger " << seq
                     << " affects no accounts";
+                JLOG (j.warn())
+                    << vt.second->getTxn()->getJson(0);
             }
 
             *db <<

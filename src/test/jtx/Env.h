@@ -22,6 +22,7 @@
 
 #include <test/jtx/Account.h>
 #include <test/jtx/amount.h>
+#include <test/jtx/envconfig.h>
 #include <test/jtx/JTx.h>
 #include <test/jtx/require.h>
 #include <test/jtx/tags.h>
@@ -37,6 +38,7 @@
 #include <ripple/json/json_value.h>
 #include <ripple/json/to_string.h>
 #include <ripple/ledger/CachedSLEs.h>
+#include <ripple/protocol/Feature.h>
 #include <ripple/protocol/Indexes.h>
 #include <ripple/protocol/Issue.h>
 #include <ripple/protocol/STAmount.h>
@@ -52,15 +54,9 @@
 #include <unordered_map>
 #include <vector>
 
+
 namespace ripple {
 namespace test {
-
-extern
-void
-setupConfigForUnitTests (Config& config);
-
-//------------------------------------------------------------------------------
-
 namespace jtx {
 
 /** Designate accounts as no-ripple in Env::fund */
@@ -77,6 +73,22 @@ std::array<uint256, 1 + sizeof...(Args)>
 features (uint256 const& key, Args const&... args)
 {
     return {{key, args...}};
+}
+
+/** Activate features in the Env ctor */
+inline
+auto
+features (std::initializer_list<uint256> keys)
+{
+    return keys;
+}
+
+/** Activate features in the Env ctor */
+inline
+auto
+features (std::vector<uint256> keys)
+{
+    return keys;
 }
 
 //------------------------------------------------------------------------------
@@ -131,6 +143,22 @@ private:
             app().config().features.insert(key);
     }
 
+    void
+    construct_arg (
+        std::initializer_list<uint256> list)
+    {
+        for(auto const& key : list)
+            app().config().features.insert(key);
+    }
+
+    void
+    construct_arg (
+        std::vector<uint256> const& list)
+    {
+        for(auto const& key : list)
+            app().config().features.insert(key);
+    }
+
 public:
     Env() = delete;
     Env (Env const&) = delete;
@@ -146,18 +174,16 @@ public:
     {
         memoize(Account::master);
         Pathfinder::initPathTable();
-        construct(std::forward<Args>(args)...);
+        // enable the the invariant enforcement amendment by default.
+        construct(
+            features(featureEnforceInvariants),
+            std::forward<Args>(args)...);
     }
 
     template <class... Args>
     Env (beast::unit_test::suite& suite_,
             Args&&... args)
-        : Env(suite_, []()
-            {
-                auto p = std::make_unique<Config>();
-                setupConfigForUnitTests(*p);
-                return p;
-            }(), std::forward<Args>(args)...)
+        : Env(suite_, envconfig(), std::forward<Args>(args)...)
     {
     }
 

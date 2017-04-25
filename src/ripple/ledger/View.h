@@ -74,6 +74,16 @@ accountFunds (ReadView const& view, AccountID const& id,
     STAmount const& saDefault, FreezeHandling freezeHandling,
         beast::Journal j);
 
+// Return the account's liquid (not reserved) XRP.  Generally prefer
+// calling accountHolds() over this interface.  However this interface
+// allows the caller to temporarily adjust the owner count should that be
+// necessary.
+//
+// @param ownerCountAdj positive to add to count, negative to reduce count.
+XRPAmount
+xrpLiquid (ReadView const& view, AccountID const& id,
+    std::int32_t ownerCountAdj, beast::Journal j);
+
 /** Iterate all items in an account's owner directory. */
 void
 forEachItem (ReadView const& view, AccountID const& id,
@@ -186,7 +196,7 @@ bool areCompatible (uint256 const& validHash, LedgerIndex validIndex,
 void
 adjustOwnerCount (ApplyView& view,
     std::shared_ptr<SLE> const& sle,
-        int amount, beast::Journal j);
+        std::int32_t amount, beast::Journal j);
 
 // Return the first entry and advance uDirEntry.
 // <-- true, if had a next entry.
@@ -335,17 +345,20 @@ transferXRP (ApplyView& view,
             STAmount const& amount,
                 beast::Journal j);
 
-NetClock::time_point const& amendmentRIPD1141SoTime ();
-bool amendmentRIPD1141 (NetClock::time_point const closeTime);
+NetClock::time_point const& fix1141Time ();
+bool fix1141 (NetClock::time_point const closeTime);
 
-NetClock::time_point const& amendmentRIPD1274SoTime ();
-bool amendmentRIPD1274 (NetClock::time_point const closeTime);
+NetClock::time_point const& fix1274Time ();
+bool fix1274 (NetClock::time_point const closeTime);
 
-NetClock::time_point const& amendmentRIPD1298SoTime ();
-bool amendmentRIPD1298 (NetClock::time_point const closeTime);
+NetClock::time_point const& fix1298Time ();
+bool fix1298 (NetClock::time_point const closeTime);
 
-NetClock::time_point const& amendmentRIPD1443SoTime ();
-bool amendmentRIPD1443 (NetClock::time_point const closeTime);
+NetClock::time_point const& fix1443Time ();
+bool fix1443 (NetClock::time_point const closeTime);
+
+NetClock::time_point const& fix1449Time ();
+bool fix1449 (NetClock::time_point const closeTime);
 
 } // ripple
 

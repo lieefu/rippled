@@ -30,12 +30,11 @@
 #include <test/jtx/utility.h>
 #include <test/jtx/JSONRPCClient.h>
 #include <ripple/app/ledger/LedgerMaster.h>
-#include <ripple/app/ledger/LedgerTiming.h>
+#include <ripple/consensus/LedgerTiming.h>
 #include <ripple/app/misc/NetworkOPs.h>
 #include <ripple/app/misc/TxQ.h>
 #include <ripple/basics/contract.h>
 #include <ripple/basics/Slice.h>
-#include <ripple/core/ConfigSections.h>
 #include <ripple/json/to_string.h>
 #include <ripple/net/HTTPClient.h>
 #include <ripple/net/RPCCall.h>
@@ -54,33 +53,6 @@
 
 namespace ripple {
 namespace test {
-
-void
-setupConfigForUnitTests (Config& cfg)
-{
-    cfg.overwrite (ConfigSection::nodeDatabase (), "type", "memory");
-    cfg.overwrite (ConfigSection::nodeDatabase (), "path", "main");
-    cfg.deprecatedClearSection (ConfigSection::importNodeDatabase ());
-    cfg.legacy("database_path", "");
-    cfg.setupControl(true, true, true);
-    cfg["server"].append("port_peer");
-    cfg["port_peer"].set("ip", "127.0.0.1");
-    cfg["port_peer"].set("port", "8080");
-    cfg["port_peer"].set("protocol", "peer");
-    cfg["server"].append("port_rpc");
-    cfg["port_rpc"].set("ip", "127.0.0.1");
-    cfg["port_rpc"].set("port", "8081");
-    cfg["port_rpc"].set("protocol", "http,ws2");
-    cfg["port_rpc"].set("admin", "127.0.0.1");
-    cfg["server"].append("port_ws");
-    cfg["port_ws"].set("ip", "127.0.0.1");
-    cfg["port_ws"].set("port", "8082");
-    cfg["port_ws"].set("protocol", "ws");
-    cfg["port_ws"].set("admin", "127.0.0.1");
-}
-
-//------------------------------------------------------------------------------
-
 namespace jtx {
 
 class SuiteSink : public beast::Journal::Sink
@@ -171,7 +143,7 @@ Env::AppBundle::AppBundle(beast::unit_test::suite& suite,
         Throw<std::runtime_error> ("Env::AppBundle: setup failed");
     timeKeeper->set(
         app->getLedgerMaster().getClosedLedger()->info().closeTime);
-    app->doStart();
+    app->doStart(false /*don't start timers*/);
     thread = std::thread(
         [&](){ app->run(); });
 
@@ -545,13 +517,23 @@ Env::do_rpc(std::vector<std::string> const& args)
         jv[jss::ripplerpc] = "2.0";
         jv[jss::id] = 5;
     }
-    auto response = client().invoke(jv[jss::method].asString(), jv[jss::params][0U]);
+    auto response = client().invoke(
+        jv[jss::method].asString(),
+        jv[jss::params][0U]);
+
     if (jv.isMember(jss::jsonrpc))
     {
         response[jss::jsonrpc] = jv[jss::jsonrpc];
         response[jss::ripplerpc] = jv[jss::ripplerpc];
         response[jss::id] = jv[jss::id];
     }
+
+    if (jv[jss::params][0u].isMember(jss::error) &&
+        (! response.isMember(jss::error)))
+    {
+        response["client_error"] = jv[jss::params][0u];
+    }
+
     return response;
 }
 
